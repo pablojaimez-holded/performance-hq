@@ -5,8 +5,11 @@ import { STORAGE_KEY } from "../data/constants";
 const DB_ROW_ID = "main";
 const SAVE_DEBOUNCE_MS = 1500;
 
-// Read-only when deployed on Vercel (public viewers can't edit)
-const IS_READ_ONLY = process.env.REACT_APP_READ_ONLY === "true";
+// Read-only when accessed from Vercel URL (public viewers can't edit)
+// Only localhost is editable — any other host is read-only
+const IS_READ_ONLY = typeof window !== "undefined"
+  && !window.location.hostname.includes("localhost")
+  && !window.location.hostname.includes("127.0.0.1");
 
 export function useStore(initialData) {
   const [data, setData] = useState(null);
