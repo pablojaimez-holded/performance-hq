@@ -5,10 +5,13 @@ import { STORAGE_KEY } from "../data/constants";
 const DB_ROW_ID = "main";
 const SAVE_DEBOUNCE_MS = 1500;
 
+// Read-only when deployed on Vercel (public viewers can't edit)
+const IS_READ_ONLY = process.env.REACT_APP_READ_ONLY === "true";
+
 export function useStore(initialData) {
   const [data, setData] = useState(null);
   const [loaded, setLoaded] = useState(false);
-  const [syncStatus, setSyncStatus] = useState("idle"); // idle | saving | saved | error
+  const [syncStatus, setSyncStatus] = useState(IS_READ_ONLY ? "readonly" : "idle");
   const timerRef = useRef(null);
 
   // Load: try Supabase first, fall back to localStorage, then initialData
@@ -24,7 +27,7 @@ export function useStore(initialData) {
 
         if (!cancelled && row?.data) {
           setData(row.data);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
+          if (!IS_READ_ONLY) localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
           setLoaded(true);
           return;
         }
@@ -33,16 +36,20 @@ export function useStore(initialData) {
         console.warn("Supabase unreachable, using local:", e.message);
       }
 
-      // Fallback: localStorage
+      // Fallback: localStorage (only in local/editable mode)
       if (!cancelled) {
-        try {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            setData(JSON.parse(saved));
-          } else {
+        if (!IS_READ_ONLY) {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+              setData(JSON.parse(saved));
+            } else {
+              setData(initialData);
+            }
+          } catch {
             setData(initialData);
           }
-        } catch {
+        } else {
           setData(initialData);
         }
         setLoaded(true);
@@ -55,6 +62,7 @@ export function useStore(initialData) {
 
   // Save to both localStorage (instant) and Supabase (debounced)
   const saveToSupabase = useCallback(async (newData) => {
+    if (IS_READ_ONLY) return; // Block writes in read-only mode
     setSyncStatus("saving");
     try {
       const { error } = await supabase
@@ -75,9 +83,9 @@ export function useStore(initialData) {
   }, []);
 
   useEffect(() => {
-    if (!loaded || !data) return;
+    if (!loaded || !data || IS_READ_ONLY) return;
 
-    // Always save to localStorage instantly
+    // Save to localStorage instantly
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
@@ -93,6 +101,7 @@ export function useStore(initialData) {
 
   // Updater: supports both direct value and functional updates
   const update = (key, valueOrFn) => {
+    if (IS_READ_ONLY) return; // Block updates in read-only mode
     setData((prev) => ({
       ...prev,
       [key]: typeof valueOrFn === "function" ? valueOrFn(prev[key]) : valueOrFn,
@@ -101,8 +110,9 @@ export function useStore(initialData) {
 
   // Batch update: merge multiple keys at once
   const batch = (fn) => {
+    if (IS_READ_ONLY) return; // Block updates in read-only mode
     setData((prev) => fn(prev));
   };
 
-  return { data, loaded, update, batch, setData, syncStatus };
+  return { data, loaded, update, batch, setData, syncStatus, isReadOnly: IS_READ_ONLY };
 }
