@@ -4,17 +4,29 @@ import { STORAGE_KEY } from "../data/constants";
 
 const DB_ROW_ID = "main";
 const SAVE_DEBOUNCE_MS = 1500;
+const ADMIN_KEY = "performance-hq-admin";
 
-// Read-only when accessed from Vercel URL (public viewers can't edit)
-// Only localhost is editable — any other host is read-only
-const IS_READ_ONLY = typeof window !== "undefined"
-  && !window.location.hostname.includes("localhost")
-  && !window.location.hostname.includes("127.0.0.1");
+// Admin mode: unlocked via ?admin=PASSWORD in URL or saved in localStorage
+function checkAdmin() {
+  const params = new URLSearchParams(window.location.search);
+  const urlKey = params.get("admin");
+  const savedKey = localStorage.getItem(ADMIN_KEY);
+  const secret = process.env.REACT_APP_ADMIN_SECRET || "holded2026";
+
+  if (urlKey === secret) {
+    localStorage.setItem(ADMIN_KEY, "true");
+    // Clean URL so password is not visible
+    window.history.replaceState({}, "", window.location.pathname);
+    return true;
+  }
+  return savedKey === "true";
+}
 
 export function useStore(initialData) {
+  const [isAdmin, setIsAdmin] = useState(checkAdmin);
   const [data, setData] = useState(null);
   const [loaded, setLoaded] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(IS_READ_ONLY ? "readonly" : "idle");
+  const [syncStatus, setSyncStatus] = useState(isAdmin ? "idle" : "readonly");
   const timerRef = useRef(null);
 
   // Load: try Supabase first, fall back to localStorage, then initialData
@@ -30,7 +42,7 @@ export function useStore(initialData) {
 
         if (!cancelled && row?.data) {
           setData(row.data);
-          if (!IS_READ_ONLY) localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
           setLoaded(true);
           return;
         }
@@ -39,20 +51,16 @@ export function useStore(initialData) {
         console.warn("Supabase unreachable, using local:", e.message);
       }
 
-      // Fallback: localStorage (only in local/editable mode)
+      // Fallback: localStorage
       if (!cancelled) {
-        if (!IS_READ_ONLY) {
-          try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-              setData(JSON.parse(saved));
-            } else {
-              setData(initialData);
-            }
-          } catch {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            setData(JSON.parse(saved));
+          } else {
             setData(initialData);
           }
-        } else {
+        } catch {
           setData(initialData);
         }
         setLoaded(true);
@@ -65,7 +73,7 @@ export function useStore(initialData) {
 
   // Save to both localStorage (instant) and Supabase (debounced)
   const saveToSupabase = useCallback(async (newData) => {
-    if (IS_READ_ONLY) return; // Block writes in read-only mode
+    if (!isAdmin) return;
     setSyncStatus("saving");
     try {
       const { error } = await supabase
@@ -83,10 +91,10 @@ export function useStore(initialData) {
       console.error("Supabase unreachable:", e.message);
       setSyncStatus("error");
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!loaded || !data || IS_READ_ONLY) return;
+    if (!loaded || !data || !isAdmin) return;
 
     // Save to localStorage instantly
     try {
@@ -100,11 +108,11 @@ export function useStore(initialData) {
     timerRef.current = setTimeout(() => saveToSupabase(data), SAVE_DEBOUNCE_MS);
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [data, loaded, saveToSupabase]);
+  }, [data, loaded, isAdmin, saveToSupabase]);
 
   // Updater: supports both direct value and functional updates
   const update = (key, valueOrFn) => {
-    if (IS_READ_ONLY) return; // Block updates in read-only mode
+    if (!isAdmin) return;
     setData((prev) => ({
       ...prev,
       [key]: typeof valueOrFn === "function" ? valueOrFn(prev[key]) : valueOrFn,
@@ -113,9 +121,9 @@ export function useStore(initialData) {
 
   // Batch update: merge multiple keys at once
   const batch = (fn) => {
-    if (IS_READ_ONLY) return; // Block updates in read-only mode
+    if (!isAdmin) return;
     setData((prev) => fn(prev));
   };
 
-  return { data, loaded, update, batch, setData, syncStatus, isReadOnly: IS_READ_ONLY };
+  return { data, loaded, update, batch, setData, syncStatus, isReadOnly: !isAdmin, isAdmin };
 }
