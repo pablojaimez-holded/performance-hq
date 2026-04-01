@@ -1,34 +1,95 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "../data/supabase";
 import { STORAGE_KEY } from "../data/constants";
+
+const DB_ROW_ID = "main";
+const SAVE_DEBOUNCE_MS = 1500;
 
 export function useStore(initialData) {
   const [data, setData] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | saving | saved | error
+  const timerRef = useRef(null);
 
-  // Load from localStorage on mount
+  // Load: try Supabase first, fall back to localStorage, then initialData
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setData(JSON.parse(saved));
-      } else {
-        setData(initialData);
+    let cancelled = false;
+    async function load() {
+      try {
+        const { data: row, error } = await supabase
+          .from("app_state")
+          .select("data")
+          .eq("id", DB_ROW_ID)
+          .maybeSingle();
+
+        if (!cancelled && row?.data) {
+          setData(row.data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
+          setLoaded(true);
+          return;
+        }
+        if (error) console.warn("Supabase load error, using local:", error.message);
+      } catch (e) {
+        console.warn("Supabase unreachable, using local:", e.message);
       }
-    } catch {
-      setData(initialData);
+
+      // Fallback: localStorage
+      if (!cancelled) {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            setData(JSON.parse(saved));
+          } else {
+            setData(initialData);
+          }
+        } catch {
+          setData(initialData);
+        }
+        setLoaded(true);
+      }
     }
-    setLoaded(true);
+    load();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line
   }, []);
 
-  // Save to localStorage on every change
+  // Save to both localStorage (instant) and Supabase (debounced)
+  const saveToSupabase = useCallback(async (newData) => {
+    setSyncStatus("saving");
+    try {
+      const { error } = await supabase
+        .from("app_state")
+        .upsert({ id: DB_ROW_ID, data: newData, updated_at: new Date().toISOString() });
+
+      if (error) {
+        console.error("Supabase save error:", error.message);
+        setSyncStatus("error");
+      } else {
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus((s) => (s === "saved" ? "idle" : s)), 2000);
+      }
+    } catch (e) {
+      console.error("Supabase unreachable:", e.message);
+      setSyncStatus("error");
+    }
+  }, []);
+
   useEffect(() => {
     if (!loaded || !data) return;
+
+    // Always save to localStorage instantly
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
-      console.error("Failed to save:", e);
+      console.error("localStorage save failed:", e);
     }
-  }, [data, loaded]);
+
+    // Debounced save to Supabase
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => saveToSupabase(data), SAVE_DEBOUNCE_MS);
+
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [data, loaded, saveToSupabase]);
 
   // Updater: supports both direct value and functional updates
   const update = (key, valueOrFn) => {
@@ -43,5 +104,5 @@ export function useStore(initialData) {
     setData((prev) => fn(prev));
   };
 
-  return { data, loaded, update, batch, setData };
+  return { data, loaded, update, batch, setData, syncStatus };
 }
