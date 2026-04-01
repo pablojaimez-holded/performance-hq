@@ -1,0 +1,98 @@
+# Performance HQ — Contexto del Proyecto
+
+> Este archivo es el punto de partida para cualquier sesión nueva en Cowork.
+> Al inicio de cada conversación, dile a Claude: **"lee el CONTEXT.md de Performance HQ"**
+
+---
+
+## ¿Qué es esto?
+
+**Performance HQ** es una app de productividad y gestión de campañas construida en React, diseñada exclusivamente para Pablo Jaimez (Performance Manager en Holded). Combina un sistema de tareas/proyectos/notas con dashboards de campañas y briefings diarios automatizados.
+
+La app vive en: `~/Downloads/performance-hq 2/`
+Para arrancarla: `cd ~/Downloads/performance-hq\ 2 && npm run dev`
+
+---
+
+## Stack técnico
+
+- **React 18** con Create React App (`react-scripts 5.0.1`)
+- **Node.js v20 LTS** (⚠️ v24 es incompatible con react-scripts 5)
+- Persistencia: **localStorage** via hook `useStore`
+- Sin librería UI externa — todo con inline styles
+- Fuente: **Inter** (Holded-inspired)
+- Colores: azul primario `#4361EE`, sistema de diseño en `src/styles/theme.js`
+- Para hacer build: `npm run build` (no `npm start`, el script se llama `dev`)
+
+---
+
+## Estructura de archivos
+
+```
+src/
+├── App.js                  # Layout principal: sidebar + main content
+├── components/
+│   ├── Briefing.js         # Briefing diario con links a dashboards
+│   ├── Planner.js          # Planificador semanal de tareas con timer
+│   ├── Sections.js         # Inbox, Changelog, Completed, Alerts, Projects
+│   ├── Notes.js            # Módulo de notas con tags y búsqueda
+│   └── UI.js               # Componentes compartidos (Checkbox, ActionButton, etc.)
+├── data/
+│   ├── constants.js        # WEEK_DAYS, CATEGORIES, PLATFORMS, AMPLITUDE_DASHBOARD
+│   ├── initialData.js      # Estructura inicial de datos (tasks, projects, notes...)
+│   └── utils.js            # uid, formatDate, getTodayName, isOverdue, etc.
+├── hooks/
+│   ├── useStore.js         # Persistencia localStorage con load/save/batch
+│   └── useTimer.js         # Timer para tracking de tiempo en tareas
+└── styles/
+    └── theme.js            # Design tokens: colores, sombras, radios, estilos `s`
+```
+
+---
+
+## Funcionalidades implementadas
+
+| Módulo | Estado | Descripción |
+|--------|--------|-------------|
+| Briefing | ✅ | Resumen diario, links a Amplitude, cambios pendientes |
+| Planner semanal | ✅ | Tareas por día, mover entre días/semanas, timer, proyectos |
+| Inbox | ✅ | Captura rápida, promover a día de la semana |
+| Proyectos | ✅ | Con subtareas, progress bar, descripción/notas, promoción a tareas |
+| Notas | ✅ | CRUD completo, 6 tags (campaña/estrategia/reunión/idea/insight/general), pin, búsqueda |
+| Changelog campañas | ✅ | Registro de cambios con recordatorio automático de revisión |
+| Completadas | ✅ | Historial de tareas y proyectos completados |
+| Alertas | ✅ | Recordatorios con prioridad y fecha de revisión |
+| Layout responsive | ✅ | Sidebar en desktop (≥900px), hamburger en móvil |
+| Diseño Holded | ✅ | Inter font, azul #4361EE, cards limpias, sidebar navigation |
+
+---
+
+## Roadmap pendiente
+
+| Feature | Prioridad | Notas |
+|---------|-----------|-------|
+| Notificaciones push | 🔴 Alta | Browser Notifications API para alertas vencidas y tareas del día |
+| Deploy (Vercel/Netlify) | 🟡 Media | Para compartir con el equipo desde URL |
+| Briefing automático Cowork | 🟡 Media | Tarea programada que genera briefing con datos de campañas |
+| Dashboard de campañas | 🟢 Futura | Integrar Google Ads, Bing, Amazon, DSP via Windsor |
+| Insights de campañas | 🟢 Futura | Motor de análisis y recomendaciones automáticas |
+
+---
+
+## Contexto de negocio (Pablo)
+
+- **Rol**: Performance Manager en Holded
+- **Canales que gestiona**: Google Ads (Search, YouTube, Demand Gen, Display), Bing Ads, Amazon Ads, Programática (DSP)
+- **Metodología de medición**: First interaction cookie + encuesta (survey) + plataformas de publicidad → visión big picture para decisiones estratégicas
+- **Dashboard principal**: Amplitude (PM Daily Control Center) — funnel completo, 3 modelos de atribución, first accounts, suscripciones
+- **Empresa**: Holded — software de gestión empresarial, diseño azul/limpio, fuente Inter
+
+---
+
+## Notas de desarrollo
+
+- Al hacer build en el sandbox de Cowork, hay que **copiar el proyecto** a un directorio temporal antes (el mount point tiene conflictos con node_modules)
+- El script de npm se llama `dev`, no `start`: `npm run dev`
+- Para verificar build: copiar a `/sessions/.../tmp/`, instalar dependencias ahí, luego `npm run build`
+- Los estilos se distribuyen entre `theme.js` (sistema de diseño) e inline styles en cada componente
+- El `s` exportado de `theme.js` son atajos de estilo reutilizables (s.card, s.input, s.chip, etc.)
