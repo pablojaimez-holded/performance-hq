@@ -50,6 +50,17 @@ export default function Briefing({ data, pendingChanges, onMarkReviewed }) {
             Se actualiza automáticamente cada mañana a las 8:30 (L-V) via Windsor
           </p>
         </div>
+        <div style={{ borderTop: "1px solid #bbf7d0", paddingTop: 8, marginTop: 4 }}>
+          <a href="/full-funnel.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#2563eb", fontWeight: 500, textDecoration: "none", display: "block", marginBottom: 4 }}>
+            → Full Funnel Dashboard (YouTube, Demand Gen & Display)
+          </a>
+          <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 0 14px" }}>
+            AWA · ACQ · REM · Impressions · CPM · VTR · CPV · Conversions · CPA · ROAS · 3 cuentas
+          </p>
+          <p style={{ fontSize: 10, color: "#8b5cf6", margin: "4px 0 0", fontStyle: "italic" }}>
+            Full funnel analysis: Awareness → Acquisition → Remarketing
+          </p>
+        </div>
       </div>
 
       {/* Pending changes */}

@@ -105,6 +105,39 @@ El **Demand Capture Dashboard** es un report HTML autogenerado que cubre Search 
 
 **Tarea programada:** `demand-capture-dashboard-refresh` — ejecuta a las 8:30 L-V, fetcha 90 días de Windsor y regenera WEEKLY_DATA en el HTML.
 
+**⚠️ IMPORTANTE — Versión canónica del dashboard:**
+El archivo `public/demand-capture.html` es la versión oficial y definitiva del dashboard. Ante cualquier tarea relacionada (refresh de datos, correcciones, mejoras), Claude DEBE leer primero ese archivo y trabajar sobre él directamente. NUNCA generar un HTML nuevo desde cero ni simplificar la estructura. Solo modificar lo estrictamente necesario (ej. inyectar WEEKLY_DATA actualizado). Si Pablo pide cambios de diseño o funcionalidad, aplicarlos sobre este archivo, no reemplazarlo.
+
+---
+
+## Full Funnel Dashboard (YouTube, Demand Gen & Display)
+
+El **Full Funnel Dashboard** es un report HTML que cubre todas las campañas de Google Ads que NO son Search ni PMAX, organizadas por etapa del funnel:
+
+- **AWA (Awareness):** Campañas VIDEO + DEMAND_GEN con "AWA" en el nombre → VVC, VRC, Magazine
+- **ACQ (Acquisition):** Campañas DEMAND_GEN con "ACQ" en el nombre → Marca-Focused, Product-Focused, Shorts, Partners
+- **REM (Remarketing):** Campañas DEMAND_GEN con "REM" en el nombre → Website Visitors, Free Users, Webinars
+
+**Cuentas de Google Ads:**
+- `793-556-1699` (Holded - Display & YouTube): AWA + ACQ
+- `624-900-3211` (Holded - Remarketing): REM
+- `865-500-6023` (Holded - Partners): ACQ (solo Demand Gen, excluye Search)
+
+**Abrir dashboard (online):** `https://<tu-dominio-vercel>/full-funnel.html`
+**Abrir dashboard (local):** [full-funnel.html](computer:///Users/pablojaimez/Downloads/performance-hq%202/public/full-funnel.html)
+
+**Contenido:**
+- Overview con KPIs agregados y distribución de Spend por funnel stage (doughnut)
+- Tab AWA: métricas upper funnel (Impressions, CPM, View Rate, CPV, VTR, Clicks, CTR)
+- Tab ACQ: métricas mid funnel (Clicks, CTR, Conversions, CPA, ROAS)
+- Tab REM: métricas bottom funnel (Conversions, CPA, ROAS, View-Through Conversions)
+- 9 gráficos Chart.js con 19 campañas across 3 cuentas
+
+**Datos:** Windsor.ai → google_ads → cuentas 793-556-1699, 624-900-3211, 865-500-6023
+
+**⚠️ IMPORTANTE — Versión canónica del dashboard:**
+El archivo `public/full-funnel.html` es la versión oficial y definitiva del dashboard. Ante cualquier tarea relacionada (refresh de datos, correcciones, mejoras), Claude DEBE leer primero ese archivo y trabajar sobre él directamente. NUNCA generar un HTML nuevo desde cero ni simplificar la estructura. Si Pablo pide cambios de diseño o funcionalidad, aplicarlos sobre este archivo, no reemplazarlo.
+
 ---
 
 ## Notas de desarrollo

@@ -7,7 +7,12 @@ export const CATEGORIES = [
   { id: "strategy", label: "Estrategia", color: "#c2410c", icon: "▲" },
   { id: "creative", label: "Creativos", color: "#d97706", icon: "★" },
   { id: "tech", label: "Tech/Setup", color: "#0891b2", icon: "⬡" },
+  { id: "slack", label: "Petición Slack", color: "#611f69", icon: "💬" },
+  { id: "email", label: "Petición Email", color: "#ea4335", icon: "📧" },
+  { id: "other", label: "Otro", color: "#6b7280", icon: "○" },
 ];
+
+export const CHANGELOG_REMINDER_PRESETS = [2, 7, 15, 30, 60, 90];
 
 export const PLATFORMS = [
   "Google Search",

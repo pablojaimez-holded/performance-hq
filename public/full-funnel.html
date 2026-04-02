@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holded Full Funnel Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2a4a7c 100%);
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(108, 92, 231, 0.3);
+        }
+        
+        .header h1 {
+            color: #c9d1d9;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #8b949e;
+            font-size: 14px;
+        }
+        
+        .user-info {
+            color: #58a6ff;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #30363d;
+            overflow-x: auto;
+        }
+        
+        .tab-button {
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .tab-button:hover {
+            color: #c9d1d9;
+        }
+        
+        .tab-button.active {
+            color: #6C5CE7;
+            border-bottom-color: #6C5CE7;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .kpi-card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            padding: 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card:hover {
+            border-color: #6C5CE7;
+            box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
+        }
+        
+        .kpi-label {
+            color: #8b949e;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .kpi-value {
+            color: #c9d1d9;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        
+        .kpi-secondary {
+            color: #58a6ff;
+            font-size: 12px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+            height: 420px;
+            max-height: 420px;
+            overflow: hidden;
+        }
+        
+        .chart-title {
+            color: #c9d1d9;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .table-container {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .table-title {
+            color: #c9d1d9;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 20px;
+            background-color: rgba(108, 92, 231, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background-color: #0d1117;
+            color: #8b949e;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #30363d;
+            font-size: 13px;
+        }
+        
+        tr:hover {
+            background-color: rgba(108, 92, 231, 0.05);
+        }
+        
+        .table-scroll {
+            overflow-x: auto;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .date-badge {
+            display: inline-block;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+        
+        .date-badge strong {
+            color: #c9d1d9;
+        }
+        
+        .doughnut-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Holded Full Funnel Dashboard</h1>
+            <p>YouTube, Demand Gen & Display Campaigns | Google Ads</p>
+            <div class="user-info">Performance Manager: Pablo Jaimez</div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab(event, 'overview')">Overview</button>
+            <button class="tab-button" onclick="switchTab(event, 'awa')">AWA (Awareness)</button>
+            <button class="tab-button" onclick="switchTab(event, 'acq')">ACQ (Acquisition)</button>
+            <button class="tab-button" onclick="switchTab(event, 'rem')">REM (Remarketing)</button>
+        </div>
+        
+        <!-- OVERVIEW TAB -->
+        <div id="overview" class="tab-content active">
+            <div class="date-badge">Período: <strong>Últimos 30 días (3 Mar - 2 Abr 2026)</strong></div>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Gasto Total</div>
+                    <div class="kpi-value">€192891.48</div>
+                    <div class="kpi-secondary">7d: €39653.58</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Impresiones</div>
+                    <div class="kpi-value">51,732,176</div>
+                    <div class="kpi-secondary">7d: 8,152,529</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Conversiones</div>
+                    <div class="kpi-value">254,138</div>
+                    <div class="kpi-secondary">7d: 40,194</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">VTC (View-Through)</div>
+                    <div class="kpi-value">16,322</div>
+                    <div class="kpi-secondary">7d: 3,223</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPA Promedio</div>
+                    <div class="kpi-value">€0.76</div>
+                    <div class="kpi-secondary">7d: €0.99</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Valor de Conversiones</div>
+                    <div class="kpi-value">€179131.80</div>
+                    <div class="kpi-secondary">7d: €33059.53</div>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Distribución de Gasto por Etapa</div>
+                    <div class="doughnut-container">
+                        <canvas id="overviewDoughnutChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Gasto por Etapa (Últimos 30 días)</div>
+                    <canvas id="overviewSpendChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container full-width">
+                <div class="chart-title">Tendencia de Gasto Diario por Etapa</div>
+                <canvas id="overviewTrendChart"></canvas>
+            </div>
+            
+            <div class="chart-container full-width">
+                <div class="chart-title">Top 10 Campañas por Gasto</div>
+                <canvas id="overviewTopCampaignsChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- AWA TAB -->
+        <div id="awa" class="tab-content">
+            <div class="date-badge">Período: <strong>Últimos 30 días (3 Mar - 2 Abr 2026)</strong></div>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Gasto Total</div>
+                    <div class="kpi-value">€24010.85</div>
+                    <div class="kpi-secondary">7d: €5201.79</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Impresiones</div>
+                    <div class="kpi-value">9,074,324</div>
+                    <div class="kpi-secondary">7d: 1,635,380</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPM</div>
+                    <div class="kpi-value">€2.65</div>
+                    <div class="kpi-secondary">7d: €3.18</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">TrueView Views</div>
+                    <div class="kpi-value">3,222,483</div>
+                    <div class="kpi-secondary">7d: 701,310</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">View Rate (%)</div>
+                    <div class="kpi-value">35.51%</div>
+                    <div class="kpi-secondary">7d: 42.88%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPV</div>
+                    <div class="kpi-value">€0.01</div>
+                    <div class="kpi-secondary">7d: €0.01</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Compromisos</div>
+                    <div class="kpi-value">3,796,872</div>
+                    <div class="kpi-secondary">7d: 812,863</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Engagement Rate (%)</div>
+                    <div class="kpi-value">41.84%</div>
+                    <div class="kpi-secondary">7d: 49.70%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">VTC</div>
+                    <div class="kpi-value">370</div>
+                    <div class="kpi-secondary">7d: 74</div>
+                </div>
+            </div>
+            
+            <div class="chart-container full-width">
+                <div class="chart-title">TrueView Views por Campaña</div>
+                <canvas id="awaVideoViewsChart"></canvas>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-title">Detalles de Campañas AWA</div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Campaña</th>
+                                <th>Gasto</th>
+                                <th>Impresiones</th>
+                                <th>CPM</th>
+                                <th>TrueView Views</th>
+                                <th>View Rate (%)</th>
+                                <th>CPV</th>
+                                <th>Compromisos</th>
+                                <th>Eng. Rate (%)</th>
+                                <th>VTC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Discovery Ads • AWA | Magazine (Monthly Posts)</td>
+                                <td>€8847.07</td>
+                                <td>1445256</td>
+                                <td>€6.12</td>
+                                <td>0</td>
+                                <td>0.00%</td>
+                                <td>€0.00</td>
+                                <td>0</td>
+                                <td>0.00%</td>
+                                <td>206</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube • AWA • VVC (Organic content)</td>
+                                <td>€3156.15</td>
+                                <td>2313785</td>
+                                <td>€1.36</td>
+                                <td>590789</td>
+                                <td>25.53%</td>
+                                <td>€0.01</td>
+                                <td>813359</td>
+                                <td>35.15%</td>
+                                <td>77</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube • AWA • VVC</td>
+                                <td>€12007.63</td>
+                                <td>5315283</td>
+                                <td>€2.26</td>
+                                <td>2631694</td>
+                                <td>49.51%</td>
+                                <td>€0.00</td>
+                                <td>2983513</td>
+                                <td>56.13%</td>
+                                <td>87</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ACQ TAB -->
+        <div id="acq" class="tab-content">
+            <div class="date-badge">Período: <strong>Últimos 30 días (3 Mar - 2 Abr 2026)</strong></div>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Gasto Total</div>
+                    <div class="kpi-value">€113489.80</div>
+                    <div class="kpi-secondary">7d: €22634.61</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Impresiones</div>
+                    <div class="kpi-value">35,297,943</div>
+                    <div class="kpi-secondary">7d: 4,900,934</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Clicks</div>
+                    <div class="kpi-value">192,839</div>
+                    <div class="kpi-secondary">7d: 29,927</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CTR (%)</div>
+                    <div class="kpi-value">0.55%</div>
+                    <div class="kpi-secondary">7d: 0.61%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPC</div>
+                    <div class="kpi-value">€0.59</div>
+                    <div class="kpi-secondary">7d: €0.76</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Conversiones</div>
+                    <div class="kpi-value">63,737</div>
+                    <div class="kpi-secondary">7d: 9,174</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPA</div>
+                    <div class="kpi-value">€1.78</div>
+                    <div class="kpi-secondary">7d: €2.47</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">VTC</div>
+                    <div class="kpi-value">9,293</div>
+                    <div class="kpi-secondary">7d: 1,617</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">TrueView Views</div>
+                    <div class="kpi-value">4,627,422</div>
+                    <div class="kpi-secondary">7d: 901,950</div>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Conversiones por Campaña</div>
+                    <canvas id="acqConversionsChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">CPA por Campaña</div>
+                    <canvas id="acqCPAChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-title">Detalles de Campañas ACQ</div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Campaña</th>
+                                <th>Gasto</th>
+                                <th>Impresiones</th>
+                                <th>Clicks</th>
+                                <th>CTR (%)</th>
+                                <th>CPC</th>
+                                <th>Conversiones</th>
+                                <th>CPA</th>
+                                <th>Valor Conv.</th>
+                                <th>VTC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Discovery Ads • ACQ • Verifactu Content</td>
+                                <td>€4253.43</td>
+                                <td>1114142</td>
+                                <td>14593</td>
+                                <td>1.31%</td>
+                                <td>€0.29</td>
+                                <td>5510</td>
+                                <td>€0.77</td>
+                                <td>€790.76</td>
+                                <td>397</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube & Google Feed • ACQ • Marca-Focused Ads (Mobile)</td>
+                                <td>€26203.82</td>
+                                <td>9787973</td>
+                                <td>94011</td>
+                                <td>0.96%</td>
+                                <td>€0.28</td>
+                                <td>21607</td>
+                                <td>€1.21</td>
+                                <td>€26985.73</td>
+                                <td>2827</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube Only • ACQ • Product-Focused Ads (Desktop)</td>
+                                <td>€35919.61</td>
+                                <td>3961365</td>
+                                <td>5972</td>
+                                <td>0.15%</td>
+                                <td>€6.01</td>
+                                <td>8905</td>
+                                <td>€4.03</td>
+                                <td>€14807.94</td>
+                                <td>1537</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube Only • ACQ • Marca-Focused Ads (Desktop)</td>
+                                <td>€13624.63</td>
+                                <td>1719028</td>
+                                <td>1998</td>
+                                <td>0.12%</td>
+                                <td>€6.82</td>
+                                <td>4162</td>
+                                <td>€3.27</td>
+                                <td>€4148.10</td>
+                                <td>732</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery Ads • ACQ • Webinar Control horario</td>
+                                <td>€6472.36</td>
+                                <td>3648880</td>
+                                <td>24388</td>
+                                <td>0.67%</td>
+                                <td>€0.27</td>
+                                <td>12235</td>
+                                <td>€0.53</td>
+                                <td>€2068.86</td>
+                                <td>1246</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube & Google Feed • ACQ • Shorts</td>
+                                <td>€20547.71</td>
+                                <td>14192719</td>
+                                <td>40857</td>
+                                <td>0.29%</td>
+                                <td>€0.50</td>
+                                <td>7393</td>
+                                <td>€2.78</td>
+                                <td>€9553.67</td>
+                                <td>2019</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery Ads • ACQ • Beta VTC</td>
+                                <td>€1060.01</td>
+                                <td>130992</td>
+                                <td>1379</td>
+                                <td>1.05%</td>
+                                <td>€0.77</td>
+                                <td>1157</td>
+                                <td>€0.92</td>
+                                <td>€1400.44</td>
+                                <td>275</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery & YouTube • ACQ • Product-Focused Ads (Informe emprende)</td>
+                                <td>€2778.21</td>
+                                <td>241840</td>
+                                <td>2420</td>
+                                <td>1.00%</td>
+                                <td>€1.15</td>
+                                <td>744</td>
+                                <td>€3.74</td>
+                                <td>€453.40</td>
+                                <td>91</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery Ads • ACQ • Ebook Control horario</td>
+                                <td>€2630.01</td>
+                                <td>501004</td>
+                                <td>7221</td>
+                                <td>1.44%</td>
+                                <td>€0.36</td>
+                                <td>2025</td>
+                                <td>€1.30</td>
+                                <td>€249.96</td>
+                                <td>169</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- REM TAB -->
+        <div id="rem" class="tab-content">
+            <div class="date-badge">Período: <strong>Últimos 30 días (3 Mar - 2 Abr 2026)</strong></div>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Gasto Total</div>
+                    <div class="kpi-value">€55390.83</div>
+                    <div class="kpi-secondary">7d: €11817.18</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Clicks</div>
+                    <div class="kpi-value">72,455</div>
+                    <div class="kpi-secondary">7d: 15,975</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CTR (%)</div>
+                    <div class="kpi-value">0.98%</div>
+                    <div class="kpi-secondary">7d: 0.99%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPC</div>
+                    <div class="kpi-value">€0.76</div>
+                    <div class="kpi-secondary">7d: €0.74</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Conversiones</div>
+                    <div class="kpi-value">41,098</div>
+                    <div class="kpi-secondary">7d: 8,274</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">CPA</div>
+                    <div class="kpi-value">€1.35</div>
+                    <div class="kpi-secondary">7d: €1.43</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Valor Conv.</div>
+                    <div class="kpi-value">€115386.57</div>
+                    <div class="kpi-secondary">7d: €18802.57</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">ROAS</div>
+                    <div class="kpi-value">2.08x</div>
+                    <div class="kpi-secondary">7d: 1.59x</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">VTC</div>
+                    <div class="kpi-value">6,659</div>
+                    <div class="kpi-secondary">7d: 1,532</div>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Conversiones por Campaña</div>
+                    <canvas id="remConversionsChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">CPA por Campaña</div>
+                    <canvas id="remCPAChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-title">Detalles de Campañas REM</div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Campaña</th>
+                                <th>Gasto</th>
+                                <th>Clicks</th>
+                                <th>CTR (%)</th>
+                                <th>CPC</th>
+                                <th>Conversiones</th>
+                                <th>CPA</th>
+                                <th>Valor Conv.</th>
+                                <th>ROAS</th>
+                                <th>VTC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Discovery Ads - Website Visitors • REM</td>
+                                <td>€393.98</td>
+                                <td>913</td>
+                                <td>1.29%</td>
+                                <td>€0.43</td>
+                                <td>665</td>
+                                <td>€0.59</td>
+                                <td>€140.38</td>
+                                <td>0.36</td>
+                                <td>107</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery Ads - Free Users - Vertical Webinars • REM</td>
+                                <td>€464.38</td>
+                                <td>193</td>
+                                <td>1.24%</td>
+                                <td>€2.41</td>
+                                <td>254</td>
+                                <td>€1.83</td>
+                                <td>€737.37</td>
+                                <td>1.59</td>
+                                <td>79</td>
+                            </tr>
+                            <tr>
+                                <td>Discovery Ads - Website Visitors - General Webinars • REM</td>
+                                <td>€1539.02</td>
+                                <td>2441</td>
+                                <td>0.80%</td>
+                                <td>€0.63</td>
+                                <td>2117</td>
+                                <td>€0.73</td>
+                                <td>€6748.02</td>
+                                <td>4.38</td>
+                                <td>554</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube & Google Feed - Free Users • REM</td>
+                                <td>€1546.84</td>
+                                <td>308</td>
+                                <td>0.63%</td>
+                                <td>€5.02</td>
+                                <td>785</td>
+                                <td>€1.97</td>
+                                <td>€18714.18</td>
+                                <td>12.10</td>
+                                <td>150</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube Only - Website Visitors • REM (Version A)</td>
+                                <td>€24775.44</td>
+                                <td>38541</td>
+                                <td>1.05%</td>
+                                <td>€0.64</td>
+                                <td>18653</td>
+                                <td>€1.33</td>
+                                <td>€29659.72</td>
+                                <td>1.20</td>
+                                <td>2475</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube Only - Website Visitors • REM + LAL (Version B)</td>
+                                <td>€24818.25</td>
+                                <td>29493</td>
+                                <td>0.92%</td>
+                                <td>€0.84</td>
+                                <td>17824</td>
+                                <td>€1.39</td>
+                                <td>€38974.27</td>
+                                <td>1.57</td>
+                                <td>3136</td>
+                            </tr>
+                            <tr>
+                                <td>YouTube Only - Free Users • REM (Oganic videos)</td>
+                                <td>€1852.93</td>
+                                <td>566</td>
+                                <td>0.95%</td>
+                                <td>€3.27</td>
+                                <td>800</td>
+                                <td>€2.32</td>
+                                <td>€20412.63</td>
+                                <td>11.02</td>
+                                <td>158</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const chartsData = {"awaSpend": 24010.8521, "acqSpend": 113489.7957, "remSpend": 55390.8349, "campaignNames": ["YouTube Only \u2022 ACQ \u2022 Product-Focused Ads", "YouTube & Google Feed \u2022 ACQ \u2022 Marca-Focu", "YouTube Only - Website Visitors \u2022 REM + ", "YouTube Only - Website Visitors \u2022 REM (V", "YouTube & Google Feed \u2022 ACQ \u2022 Shorts", "YouTube Only \u2022 ACQ \u2022 Marca-Focused Ads (", "YouTube \u2022 AWA \u2022 VVC", "Discovery Ads \u2022 AWA |\u00a0Magazine (Monthly ", "Discovery Ads \u2022 ACQ \u2022 Webinar Control ho", "Discovery Ads \u2022 ACQ \u2022 Verifactu Content"], "campaignSpend": [35919.61409999999, 26203.821000000007, 24818.2517, 24775.436400000002, 20547.705, 13624.633799999994, 12007.6262, 8847.0749, 6472.363200000001, 4253.425899999999], "dates": ["2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-14", "2026-03-15", "2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01"], "dailyAWA": [829.4381, 827.4345000000001, 875.2219, 857.2332, 850.6463, 857.9162, 870.9978, 808.78, 823.4076, 816.5839, 816.7207000000001, 809.6533999999999, 809.5112999999999, 812.3487, 814.4822, 802.2832000000001, 801.5783, 804.1242, 808.0409999999999, 789.5382, 790.4208, 761.4211, 771.2796000000001, 754.288, 783.6275, 725.215, 713.2236, 696.9205999999999, 661.9598, 866.5554], "dailyACQ": [4683.1971, 4800.7312, 5176.086, 4527.8795, 4904.010700000001, 5198.2119, 5038.830199999999, 4945.2684, 4745.6323, 3957.3738000000003, 3549.9323, 3159.5339000000004, 3724.2394, 3304.3297000000002, 3280.7015, 3311.0777, 2704.6896, 2988.5981, 3023.7007999999996, 3109.0162, 2874.1544, 3846.0652, 4001.9298000000003, 4256.150200000001, 3149.9871000000003, 3164.374, 2972.7769, 2674.6163, 2503.4622, 3913.2392999999993], "dailyREM": [2271.5556, 2255.0461, 2315.8743, 1843.7518, 1915.9315, 1914.6298, 1904.7466000000002, 2002.0348999999999, 2084.7931, 2134.2983, 1991.7523999999999, 2005.6808999999998, 1949.6675, 1785.2082999999998, 1703.1263000000001, 1723.8194, 1704.6609999999998, 1664.1248000000003, 1627.4186, 1675.3225, 1684.8943, 1697.4448, 1717.8727, 1671.8078, 1684.8083000000001, 1722.6499, 1816.9375000000002, 1692.8786999999998, 1457.6825, 1770.4147], "awaVideoViews": [0, 590789, 2631694], "awaNames": ["Discovery Ads \u2022 AWA |\u00a0Magazine (Mon", "YouTube \u2022 AWA \u2022 VVC (Organic conten", "YouTube \u2022 AWA \u2022 VVC"], "acqConversions": [5510, 21607, 8904, 4162, 12235, 7392, 1156, 743, 2024], "acqNames": ["Discovery Ads \u2022 ACQ \u2022 Verifactu Con", "YouTube & Google Feed \u2022 ACQ \u2022 Marca", "YouTube Only \u2022 ACQ \u2022 Product-Focuse", "YouTube Only \u2022 ACQ \u2022 Marca-Focused ", "Discovery Ads \u2022 ACQ \u2022 Webinar Contr", "YouTube & Google Feed \u2022 ACQ \u2022 Short", "Discovery Ads \u2022 ACQ \u2022 Beta VTC", "Discovery & YouTube \u2022 ACQ \u2022 Product", "Discovery Ads \u2022 ACQ \u2022 Ebook Control"], "acqCPA": [0.77, 1.21, 4.03, 3.27, 0.53, 2.78, 0.92, 3.74, 1.3], "remConversions": [664, 254, 2116, 784, 18653, 17824, 799], "remNames": ["Discovery Ads - Website Visitors \u2022 ", "Discovery Ads - Free Users -\u00a0Vertic", "Discovery Ads - Website Visitors - ", "YouTube & Google Feed - Free Users ", "YouTube Only - Website Visitors \u2022 R", "YouTube Only - Website Visitors \u2022 R", "YouTube Only - Free Users \u2022 REM (Og"], "remCPA": [0.59, 1.83, 0.73, 1.97, 1.33, 1.39, 2.32]};
+        
+        function switchTab(event, tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            setTimeout(() => {
+                if (tabName === 'overview') initOverviewCharts();
+                else if (tabName === 'awa') initAWACharts();
+                else if (tabName === 'acq') initACQCharts();
+                else if (tabName === 'rem') initREMCharts();
+            }, 100);
+        }
+        
+        const colors = {
+            primary: '#6C5CE7',
+            awa: '#8b5cf6',
+            acq: '#3b82f6',
+            rem: '#f59e0b',
+            text: '#c9d1d9',
+            grid: '#30363d'
+        };
+        
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: colors.text, font: { size: 12 } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: colors.text,
+                    bodyColor: colors.text,
+                    borderColor: colors.grid,
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: colors.text, font: { size: 11 } },
+                    grid: { color: colors.grid, drawBorder: false }
+                },
+                y: {
+                    ticks: { color: colors.text, font: { size: 11 } },
+                    grid: { color: colors.grid, drawBorder: false }
+                }
+            }
+        };
+        
+        function initOverviewCharts() {
+            const doughnutCtx = document.getElementById('overviewDoughnutChart');
+            if (doughnutCtx && !window.overviewDoughnut) {
+                window.overviewDoughnut = new Chart(doughnutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['AWA (Awareness)', 'ACQ (Acquisition)', 'REM (Remarketing)'],
+                        datasets: [{
+                            data: [chartsData.awaSpend, chartsData.acqSpend, chartsData.remSpend],
+                            backgroundColor: [colors.awa, colors.acq, colors.rem],
+                            borderColor: '#161b22',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        plugins: {
+                            ...chartOptions.plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: colors.text, padding: 15, font: { size: 12 } }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            const spendCtx = document.getElementById('overviewSpendChart');
+            if (spendCtx && !window.overviewSpend) {
+                window.overviewSpend = new Chart(spendCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['AWA (Awareness)', 'ACQ (Acquisition)', 'REM (Remarketing)'],
+                        datasets: [{
+                            label: 'Gasto (€)',
+                            data: [chartsData.awaSpend, chartsData.acqSpend, chartsData.remSpend],
+                            backgroundColor: [colors.awa, colors.acq, colors.rem]
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+            
+            const trendCtx = document.getElementById('overviewTrendChart');
+            if (trendCtx && !window.overviewTrend) {
+                window.overviewTrend = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: chartsData.dates,
+                        datasets: [
+                            {
+                                label: 'AWA (Awareness)',
+                                data: chartsData.dailyAWA,
+                                borderColor: colors.awa,
+                                backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                                tension: 0.3
+                            },
+                            {
+                                label: 'ACQ (Acquisition)',
+                                data: chartsData.dailyACQ,
+                                borderColor: colors.acq,
+                                backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                                tension: 0.3
+                            },
+                            {
+                                label: 'REM (Remarketing)',
+                                data: chartsData.dailyREM,
+                                borderColor: colors.rem,
+                                backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: chartOptions
+                });
+            }
+            
+            const topCtx = document.getElementById('overviewTopCampaignsChart');
+            if (topCtx && !window.overviewTop) {
+                window.overviewTop = new Chart(topCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.campaignNames,
+                        datasets: [{
+                            label: 'Gasto (€)',
+                            data: chartsData.campaignSpend,
+                            backgroundColor: colors.primary
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+        }
+        
+        function initAWACharts() {
+            const videoCtx = document.getElementById('awaVideoViewsChart');
+            if (videoCtx && !window.awaVideo) {
+                window.awaVideo = new Chart(videoCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.awaNames,
+                        datasets: [{
+                            label: 'TrueView Views',
+                            data: chartsData.awaVideoViews,
+                            backgroundColor: colors.awa
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+        }
+        
+        function initACQCharts() {
+            const convCtx = document.getElementById('acqConversionsChart');
+            if (convCtx && !window.acqConv) {
+                window.acqConv = new Chart(convCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.acqNames,
+                        datasets: [{
+                            label: 'Conversiones',
+                            data: chartsData.acqConversions,
+                            backgroundColor: colors.acq
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+            
+            const cpaCtx = document.getElementById('acqCPAChart');
+            if (cpaCtx && !window.acqCPA) {
+                window.acqCPA = new Chart(cpaCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.acqNames,
+                        datasets: [{
+                            label: 'CPA (€)',
+                            data: chartsData.acqCPA,
+                            backgroundColor: colors.acq
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+        }
+        
+        function initREMCharts() {
+            const convCtx = document.getElementById('remConversionsChart');
+            if (convCtx && !window.remConv) {
+                window.remConv = new Chart(convCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.remNames,
+                        datasets: [{
+                            label: 'Conversiones',
+                            data: chartsData.remConversions,
+                            backgroundColor: colors.rem
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+            
+            const cpaCtx = document.getElementById('remCPAChart');
+            if (cpaCtx && !window.remCPA) {
+                window.remCPA = new Chart(cpaCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartsData.remNames,
+                        datasets: [{
+                            label: 'CPA (€)',
+                            data: chartsData.remCPA,
+                            backgroundColor: colors.rem
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        indexAxis: 'y'
+                    }
+                });
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            initOverviewCharts();
+        });
+    </script>
+</body>
+</html>

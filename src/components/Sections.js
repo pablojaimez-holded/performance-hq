@@ -1,26 +1,35 @@
 import React, { useState } from "react";
-import { WEEK_DAYS, PLATFORMS, CHANGE_TYPES } from "../data/constants";
-import { uid, formatDate, formatDateFull, daysFromNow, isOverdue } from "../data/utils";
-import { Checkbox, ActionButton, EmptyState, SectionHeader, getCat } from "./UI";
+import { WEEK_DAYS, PLATFORMS, CHANGE_TYPES, CHANGELOG_REMINDER_PRESETS } from "../data/constants";
+import { uid, formatDate, formatDateFull, daysFromNow, isOverdue, getWeekStart, getWeekIdFromDate } from "../data/utils";
+import { Checkbox, CategoryPicker, ActionButton, EmptyState, SectionHeader, getCat } from "./UI";
 import { s } from "../styles/theme";
 
 // ═══════════════ INBOX ═══════════════
 export function Inbox({ data, onBatch }) {
   const [input, setInput] = useState("");
+  const [cat, setCat] = useState("optimize");
+  const [showCat, setShowCat] = useState(false);
 
   const add = () => {
     if (!input.trim()) return;
-    onBatch((p) => ({ ...p, inbox: [{ id: uid(), text: input.trim(), at: new Date().toISOString(), up: false }, ...p.inbox] }));
+    onBatch((p) => ({ ...p, inbox: [{ id: uid(), text: input.trim(), cat, at: new Date().toISOString(), up: false }, ...p.inbox] }));
     setInput("");
   };
 
-  const promote = (id, day) => {
+  const promote = (id, day, weekOffset) => {
     const it = data.inbox.find((x) => x.id === id);
     if (!it) return;
+    const off = weekOffset || 0;
+    let targetKey = day;
+    if (off !== 0) {
+      const ws = getWeekStart(off);
+      const wid = getWeekIdFromDate(ws);
+      targetKey = `${wid}::${day}`;
+    }
     onBatch((p) => ({
       ...p,
       inbox: p.inbox.map((x) => (x.id === id ? { ...x, up: true } : x)),
-      tasks: { ...p.tasks, [day]: [...(p.tasks[day] || []), { id: uid(), text: it.text, cat: "optimize", dur: 30, ts: 0 }] },
+      tasks: { ...p.tasks, [targetKey]: [...(p.tasks[targetKey] || []), { id: uid(), text: it.text, cat: it.cat || "optimize", dur: 30, ts: 0, desc: "" }] },
     }));
   };
 
@@ -31,46 +40,109 @@ export function Inbox({ data, onBatch }) {
   return (
     <div style={{ ...s.card, animation: "fadeIn .2s ease" }}>
       <SectionHeader title="Inbox" right={<span style={{ fontSize: 11, color: "#94a3b8" }}>Ideas · peticiones</span>} />
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
         <input type="text" placeholder="Apunta lo que sea..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} style={{ ...s.input, flex: 1 }} />
         <ActionButton onClick={add}>+</ActionButton>
       </div>
+      {/* Category selector toggle */}
+      <div style={{ marginBottom: 12 }}>
+        <button onClick={() => setShowCat(!showCat)} style={{ fontSize: 11, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+          Tipo: <span style={{ color: getCat(cat).color, fontWeight: 600 }}>{getCat(cat).icon} {getCat(cat).label}</span> <span style={{ color: "#cbd5e1" }}>{showCat ? "▲" : "▼"}</span>
+        </button>
+        {showCat && (
+          <div style={{ marginTop: 6 }}>
+            <CategoryPicker value={cat} onChange={(c) => { setCat(c); setShowCat(false); }} />
+          </div>
+        )}
+      </div>
       {pending.length === 0 && <EmptyState text="Inbox vacío" />}
-      {pending.map((it) => (
-        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc" }}>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{it.text}</span>
-            <span style={{ fontSize: 10, color: "#cbd5e1", display: "block", marginTop: 1 }}>{formatDateFull(it.at)}</span>
+      {pending.map((it) => {
+        const ic = getCat(it.cat || "optimize");
+        return (
+          <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: ic.color, fontSize: 8 }}>{ic.icon}</span>
+                <span style={{ fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{it.text}</span>
+              </div>
+              <div style={{ display: "flex", gap: 4, marginTop: 1 }}>
+                <span style={{ fontSize: 10, color: ic.color, fontWeight: 500 }}>{ic.label}</span>
+                <span style={{ fontSize: 10, color: "#cbd5e1" }}>{formatDateFull(it.at)}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 3, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {WEEK_DAYS.map((d) => (<button key={d} onClick={() => promote(it.id, d)} style={s.chip}>{d.slice(0, 3)}</button>))}
+              <button onClick={() => promote(it.id, "Lunes", 1)} style={{ ...s.chip, background: "#f0fdf4", color: "#059669", borderColor: "#bbf7d0", fontWeight: 600 }}>Próx</button>
+              <button onClick={() => del(it.id)} style={s.chipDanger}>✕</button>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-            {WEEK_DAYS.map((d) => (<button key={d} onClick={() => promote(it.id, d)} style={s.chip}>{d.slice(0, 3)}</button>))}
-            <button onClick={() => del(it.id)} style={s.chipDanger}>✕</button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 // ═══════════════ CHANGELOG ═══════════════
+const COMMENT_COLORS = [
+  { id: "none", label: "Sin color", bg: "transparent", border: "#f1f5f9" },
+  { id: "green", label: "Verde", bg: "#f0fdf4", border: "#bbf7d0" },
+  { id: "yellow", label: "Amarillo", bg: "#fffbeb", border: "#fde68a" },
+  { id: "grey", label: "Gris", bg: "#f8fafc", border: "#e2e8f0" },
+];
+
 export function Changelog({ data, onBatch }) {
   const [form, setForm] = useState(false);
-  const [nw, setNw] = useState({ text: "", campaign: "", plat: "Google Search", type: "Cambio de pujas", days: 3, detail: "", changeDate: new Date().toISOString().split("T")[0] });
+  const [nw, setNw] = useState({
+    text: "", campaign: "", plat: "Google Search", type: "Cambio de pujas",
+    days: 7, detail: "", changeDate: new Date().toISOString().split("T")[0],
+    noReminder: false, commentColor: "none"
+  });
 
   const pending = data.changelog.filter((c) => c.revDate && !c.rev && isOverdue(c.revDate));
 
   const add = () => {
     if (!nw.text.trim()) return;
-    const rd = daysFromNow(nw.days);
-    const campLabel = nw.campaign.trim() ? ` [${nw.campaign.trim()}]` : "";
-    const ch = { id: uid(), text: nw.text.trim(), campaign: nw.campaign.trim(), plat: nw.plat, type: nw.type, detail: nw.detail, at: new Date().toISOString(), changeDate: nw.changeDate, revDate: rd, rev: false };
-    const al = { id: uid(), text: `Revisar: ${nw.text.trim()}${campLabel} (${nw.plat})`, pri: "high", at: new Date().toISOString(), date: rd, off: false, auto: true };
-    onBatch((p) => ({ ...p, changelog: [ch, ...p.changelog], reminders: [al, ...p.reminders] }));
-    setNw({ text: "", campaign: "", plat: "Google Search", type: "Cambio de pujas", days: 3, detail: "", changeDate: new Date().toISOString().split("T")[0] });
+    const ch = {
+      id: uid(), text: nw.text.trim(), campaign: nw.campaign.trim(),
+      plat: nw.plat, type: nw.type, detail: nw.detail,
+      at: new Date().toISOString(), changeDate: nw.changeDate,
+      revDate: nw.noReminder ? null : daysFromNow(nw.days),
+      rev: false, commentColor: nw.commentColor || "none",
+    };
+
+    const updates = { changelog: [ch, ...data.changelog] };
+
+    // Only create reminder if noReminder is false
+    if (!nw.noReminder) {
+      const campLabel = nw.campaign.trim() ? ` [${nw.campaign.trim()}]` : "";
+      const al = {
+        id: uid(), text: `Revisar: ${nw.text.trim()}${campLabel} (${nw.plat})`,
+        pri: "high", at: new Date().toISOString(), date: daysFromNow(nw.days), off: false, auto: true
+      };
+      updates.reminders = [al, ...data.reminders];
+    }
+
+    onBatch((p) => ({
+      ...p,
+      changelog: updates.changelog,
+      ...(updates.reminders ? { reminders: updates.reminders } : {}),
+    }));
+
+    setNw({
+      text: "", campaign: "", plat: "Google Search", type: "Cambio de pujas",
+      days: 7, detail: "", changeDate: new Date().toISOString().split("T")[0],
+      noReminder: false, commentColor: "none"
+    });
     setForm(false);
   };
 
   const markRev = (id) => onBatch((p) => ({ ...p, changelog: p.changelog.map((c) => (c.id === id ? { ...c, rev: true } : c)) }));
+
+  const getCommentStyle = (colorId) => {
+    const cc = COMMENT_COLORS.find((c) => c.id === colorId) || COMMENT_COLORS[0];
+    if (cc.id === "none") return {};
+    return { background: cc.bg, borderRadius: 6, padding: "8px 10px", border: `1px solid ${cc.border}` };
+  };
 
   return (
     <div style={{ ...s.card, animation: "fadeIn .2s ease" }}>
@@ -85,18 +157,48 @@ export function Changelog({ data, onBatch }) {
             <select value={nw.plat} onChange={(e) => setNw({ ...nw, plat: e.target.value })} style={{ ...s.select, flex: 1 }}>{PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select>
             <select value={nw.type} onChange={(e) => setNw({ ...nw, type: e.target.value })} style={{ ...s.select, flex: 1 }}>{CHANGE_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
           </div>
+
+          {/* Comment color highlight */}
+          <div>
+            <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Destacar comentario</label>
+            <div style={{ display: "flex", gap: 4 }}>
+              {COMMENT_COLORS.map((cc) => (
+                <button
+                  key={cc.id}
+                  onClick={() => setNw({ ...nw, commentColor: cc.id })}
+                  style={{
+                    padding: "4px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600,
+                    background: nw.commentColor === cc.id ? (cc.id === "none" ? "#1e293b" : cc.bg) : "transparent",
+                    color: nw.commentColor === cc.id ? (cc.id === "none" ? "#fff" : "#1e293b") : "#64748b",
+                    border: `1px solid ${cc.border}`,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >{cc.label}</button>
+              ))}
+            </div>
+          </div>
+
           <div style={s.row}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Fecha del cambio</label>
               <input type="date" value={nw.changeDate} onChange={(e) => setNw({ ...nw, changeDate: e.target.value })} style={{ ...s.input, fontSize: 12 }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Recordar en</label>
-              <div style={s.row}>
-                {[2, 3, 5, 7, 14].map((d) => (
-                  <button key={d} onClick={() => setNw({ ...nw, days: d })} style={{ padding: "4px 9px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: nw.days === d ? "#1e293b" : "transparent", color: nw.days === d ? "#fff" : "#64748b", border: "none", cursor: "pointer", fontFamily: "inherit" }}>{d}d</button>
-                ))}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                <label style={{ fontSize: 11, color: "#64748b" }}>Recordar en</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: nw.noReminder ? "#dc2626" : "#94a3b8", cursor: "pointer" }}>
+                  <input type="checkbox" checked={nw.noReminder} onChange={(e) => setNw({ ...nw, noReminder: e.target.checked })} style={{ width: 12, height: 12 }} />
+                  Sin recordatorio
+                </label>
               </div>
+              {!nw.noReminder && (
+                <div style={s.row}>
+                  {CHANGELOG_REMINDER_PRESETS.map((d) => (
+                    <button key={d} onClick={() => setNw({ ...nw, days: d })} style={{ padding: "4px 9px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: nw.days === d ? "#1e293b" : "transparent", color: nw.days === d ? "#fff" : "#64748b", border: "none", cursor: "pointer", fontFamily: "inherit" }}>{d}d</button>
+                  ))}
+                </div>
+              )}
+              {nw.noReminder && <span style={{ fontSize: 11, color: "#cbd5e1" }}>No se creará alerta</span>}
             </div>
           </div>
           <button onClick={add} style={s.confirm}>Registrar</button>
@@ -120,21 +222,25 @@ export function Changelog({ data, onBatch }) {
         </div>
       )}
 
-      {data.changelog.filter((c) => c.rev || !(c.revDate && isOverdue(c.revDate))).map((ch) => (
-        <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc", opacity: ch.rev ? 0.5 : 1 }}>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{ch.text}</span>
-            {ch.campaign && <span style={{ fontSize: 10, color: "#2563eb", display: "block", marginTop: 1 }}>{ch.campaign}</span>}
-            {ch.detail && <span style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 1 }}>{ch.detail}</span>}
-            <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-              <span style={{ fontSize: 10, color: "#94a3b8" }}>{ch.plat} · {ch.type}</span>
-              <span style={{ fontSize: 10, color: "#cbd5e1" }}>{ch.changeDate ? formatDate(ch.changeDate) : formatDateFull(ch.at)}</span>
-              {ch.rev && <span style={{ fontSize: 10, color: "#059669" }}>✓</span>}
-              {!ch.rev && ch.revDate && <span style={{ fontSize: 10, color: "#f59e0b" }}>revisar {formatDate(ch.revDate)}</span>}
+      {data.changelog.filter((c) => c.rev || !(c.revDate && isOverdue(c.revDate))).map((ch) => {
+        const colorStyle = getCommentStyle(ch.commentColor);
+        return (
+          <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc", opacity: ch.rev ? 0.5 : 1, ...colorStyle, marginBottom: colorStyle.background ? 4 : 0 }}>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{ch.text}</span>
+              {ch.campaign && <span style={{ fontSize: 10, color: "#2563eb", display: "block", marginTop: 1 }}>{ch.campaign}</span>}
+              {ch.detail && <span style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 1 }}>{ch.detail}</span>}
+              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                <span style={{ fontSize: 10, color: "#94a3b8" }}>{ch.plat} · {ch.type}</span>
+                <span style={{ fontSize: 10, color: "#cbd5e1" }}>{ch.changeDate ? formatDate(ch.changeDate) : formatDateFull(ch.at)}</span>
+                {ch.rev && <span style={{ fontSize: 10, color: "#059669" }}>✓</span>}
+                {!ch.rev && ch.revDate && <span style={{ fontSize: 10, color: "#f59e0b" }}>revisar {formatDate(ch.revDate)}</span>}
+                {!ch.rev && !ch.revDate && <span style={{ fontSize: 10, color: "#cbd5e1" }}>sin recordatorio</span>}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {data.changelog.length === 0 && !form && <EmptyState text="Sin cambios" />}
     </div>
   );
@@ -240,7 +346,7 @@ export function Alerts({ data, onBatch }) {
 export function Projects({ data, onBatch }) {
   const [form, setForm] = useState(false);
   const [nw, setNw] = useState({ name: "", desc: "", subs: "" });
-  const [editDesc, setEditDesc] = useState(null); // projectId being edited
+  const [editDesc, setEditDesc] = useState(null);
   const [exp, setExp] = useState(null);
   const [subIn, setSubIn] = useState("");
 
@@ -283,7 +389,7 @@ export function Projects({ data, onBatch }) {
     const pr = data.projects.find((p) => p.id === projId);
     const sub = pr?.subs.find((ss) => ss.id === subId);
     if (!sub) return;
-    onBatch((p) => ({ ...p, tasks: { ...p.tasks, [day]: [...(p.tasks[day] || []), { id: uid(), text: `${sub.text} (${pr.name})`, cat: "optimize", dur: 30, ts: 0, pid: projId }] } }));
+    onBatch((p) => ({ ...p, tasks: { ...p.tasks, [day]: [...(p.tasks[day] || []), { id: uid(), text: `${sub.text} (${pr.name})`, cat: "optimize", dur: 30, ts: 0, pid: projId, desc: "" }] } }));
   };
 
   return (
@@ -319,7 +425,6 @@ export function Projects({ data, onBatch }) {
             </button>
             {isExp && (
               <div style={{ padding: "8px 12px 12px", borderTop: "1px solid #f1f5f9" }}>
-                {/* Project description/notes */}
                 {editDesc === pr.id ? (
                   <div style={{ marginBottom: 10 }}>
                     <textarea
