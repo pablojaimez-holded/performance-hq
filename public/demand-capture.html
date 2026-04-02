@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demand Capture Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #8b949e;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .tab-button {
+            padding: 16px 24px;
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tab-button:hover {
+            color: #c9d1d9;
+        }
+
+        .tab-button.active {
+            color: #6C5CE7;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #6C5CE7;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .kpi-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            transition: border-color 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: #6C5CE7;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            color: #4ECB71;
+        }
+
+        .kpi-change.negative {
+            color: #FF6B6B;
+        }
+
+        /* Trend Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #0d1117;
+            border-bottom: 2px solid #30363d;
+        }
+
+        th {
+            padding: 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 16px;
+            border-top: 1px solid #30363d;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #0d1117;
+        }
+
+        .metric-name {
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .metric-value {
+            color: #c9d1d9;
+            font-weight: 500;
+        }
+
+        .metric-comparison {
+            color: #8b949e;
+            font-size: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-positive {
+            background: rgba(78, 203, 113, 0.15);
+            color: #4ECB71;
+        }
+
+        .status-negative {
+            background: rgba(255, 107, 107, 0.15);
+            color: #FF6B6B;
+        }
+
+        .status-neutral {
+            background: rgba(138, 148, 158, 0.15);
+            color: #8b949e;
+        }
+
+        /* Weekly Charts Grid */
+        .weekly-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .weekly-charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .weekly-chart-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .weekly-chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .weekly-chart-container {
+            position: relative;
+            height: 320px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-button {
+                padding: 12px 16px;
+                font-size: 12px;
+            }
+
+            .kpi-value {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Demand Capture Dashboard</h1>
+            <p>Search & PMAX | Excluyendo Brand</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="overview">Overview</button>
+            <button class="tab-button" data-tab="ventana30">Ventana Media (30 días)</button>
+            <button class="tab-button" data-tab="ventana90">Ventana Larga (90 días)</button>
+        </div>
+
+        <!-- Tab 1: Overview -->
+        <div class="tab-content active" id="overview">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Spend (30d)</div>
+                    <div class="kpi-value">$45,230</div>
+                    <div class="kpi-change">↑ 12.5% vs last period</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Clicks (30d)</div>
+                    <div class="kpi-value">8,456</div>
+                    <div class="kpi-change">↑ 8.3% vs last period</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">FASS (30d)</div>
+                    <div class="kpi-value">$5.35</div>
+                    <div class="kpi-change negative">↓ -3.2% vs last period</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">ROAS QEv2 (30d)</div>
+                    <div class="kpi-value">2.14x</div>
+                    <div class="kpi-change">↑ 5.8% vs last period</div>
+                </div>
+            </div>
+
+            <!-- Trend Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Spend Trend (Last 4 Weeks)</div>
+                    <div class="chart-container">
+                        <canvas id="chartOverviewSpend"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">FASS Trend (Last 4 Weeks)</div>
+                    <div class="chart-container">
+                        <canvas id="chartOverviewFass"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Ventana Media (30 días) -->
+        <div class="tab-content" id="ventana30">
+            <div class="table-container">
+                <table id="table30">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>vs Previous Period</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="metric-name">Spend</td>
+                            <td class="metric-value">$45,230.00</td>
+                            <td class="metric-comparison">+12.5%</td>
+                            <td><span class="status-badge status-positive">On Track</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">Clicks</td>
+                            <td class="metric-value">8,456</td>
+                            <td class="metric-comparison">+8.3%</td>
+                            <td><span class="status-badge status-positive">Good</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CPC</td>
+                            <td class="metric-value">$5.35</td>
+                            <td class="metric-comparison">+3.8%</td>
+                            <td><span class="status-badge status-neutral">Stable</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">Conversions</td>
+                            <td class="metric-value">1,247</td>
+                            <td class="metric-comparison">+14.2%</td>
+                            <td><span class="status-badge status-positive">Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CPA</td>
+                            <td class="metric-value">$36.28</td>
+                            <td class="metric-comparison">-2.1%</td>
+                            <td><span class="status-badge status-positive">Optimized</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">ROAS</td>
+                            <td class="metric-value">2.14x</td>
+                            <td class="metric-comparison">+5.8%</td>
+                            <td><span class="status-badge status-positive">Above Target</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR FAC</td>
+                            <td class="metric-value">0.97%</td>
+                            <td class="metric-comparison">+0.12%</td>
+                            <td><span class="status-badge status-positive">Growing</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR FASS</td>
+                            <td class="metric-value">0.81%</td>
+                            <td class="metric-comparison">-0.08%</td>
+                            <td><span class="status-badge status-negative">Declining</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR QEv2</td>
+                            <td class="metric-value">0.85%</td>
+                            <td class="metric-comparison">+0.05%</td>
+                            <td><span class="status-badge status-positive">Stable</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Ventana Larga (90 días) -->
+        <div class="tab-content" id="ventana90">
+            <div class="table-container">
+                <table id="table90">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>vs Previous Period</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="metric-name">Spend</td>
+                            <td class="metric-value">$128,450.00</td>
+                            <td class="metric-comparison">+18.3%</td>
+                            <td><span class="status-badge status-positive">On Track</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">Clicks</td>
+                            <td class="metric-value">23,891</td>
+                            <td class="metric-comparison">+11.2%</td>
+                            <td><span class="status-badge status-positive">Good</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CPC</td>
+                            <td class="metric-value">$5.37</td>
+                            <td class="metric-comparison">+6.2%</td>
+                            <td><span class="status-badge status-neutral">Stable</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">Conversions</td>
+                            <td class="metric-value">3,564</td>
+                            <td class="metric-comparison">+19.7%</td>
+                            <td><span class="status-badge status-positive">Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CPA</td>
+                            <td class="metric-value">$36.05</td>
+                            <td class="metric-comparison">-0.8%</td>
+                            <td><span class="status-badge status-positive">Optimized</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">ROAS</td>
+                            <td class="metric-value">2.32x</td>
+                            <td class="metric-comparison">+8.4%</td>
+                            <td><span class="status-badge status-positive">Above Target</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR FAC</td>
+                            <td class="metric-value">0.94%</td>
+                            <td class="metric-comparison">+0.18%</td>
+                            <td><span class="status-badge status-positive">Growing</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR FASS</td>
+                            <td class="metric-value">0.79%</td>
+                            <td class="metric-comparison">-0.12%</td>
+                            <td><span class="status-badge status-negative">Declining</span></td>
+                        </tr>
+                        <tr>
+                            <td class="metric-name">CR QEv2</td>
+                            <td class="metric-value">0.88%</td>
+                            <td class="metric-comparison">+0.08%</td>
+                            <td><span class="status-badge status-positive">Stable</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Weekly Charts -->
+            <div class="weekly-charts-grid">
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">FASS Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90Fass"></canvas>
+                    </div>
+                </div>
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">FAC Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90Fac"></canvas>
+                    </div>
+                </div>
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">QEv2 Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90Qev2"></canvas>
+                    </div>
+                </div>
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">CR QEv2 Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90CrQev2"></canvas>
+                    </div>
+                </div>
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">ROAS QEv2 Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90RoasQev2"></canvas>
+                    </div>
+                </div>
+                <div class="weekly-chart-card">
+                    <div class="weekly-chart-title">CAC Payback Semanal (sin Brand)</div>
+                    <div class="weekly-chart-container">
+                        <canvas id="chart90CacPayback"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Weekly Data
+        const WEEKLY_DATA = {
+            "labels": ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W10", "W11", "W12", "W13", "W14"],
+            "fass": [35.47, 79.08, 77.96, 67.56, 72.52, 59.02, 43.53, 44.57, 52.87, 24.55, 19.97, 18.51, 6.66, 2.0],
+            "fac": [103.82, 282.24, 381.19, 329.41, 350.08, 347.31, 338.89, 387.41, 396.49, 297.7, 228.57, 182.07, 216.97, 91.26],
+            "qev2": [94.62, 276.12, 369.2, 336.94, 358.05, 331.07, 316.13, 385.12, 382.81, 240.67, 174.28, 166.33, 182.44, 3.05],
+            "cr_qev2": [0.5, 0.63, 0.85, 0.86, 0.98, 0.9, 1.05, 0.74, 0.68, 0.92, 1.2, 1.27, 1.08, 0.04],
+            "roas_qev2": [1.42, 2.02, 2.39, 2.66, 2.66, 2.32, 2.33, 1.86, 1.97, 1.79, 2.46, 2.98, 1.76, 0.2],
+            "cac_payback": [44.86, 37.99, 45.34, 42.76, 35.8, 53.02, 48.22, 54.3, 60.05, 118.48, 62.32, 88.44, 233.38, 528.66]
+        };
+
+        // Chart context storage
+        let chartsInitialized = false;
+        let charts90 = {};
+
+        // Chart colors
+        const chartColors = {
+            fass: '#6C5CE7',
+            fac: '#00D2FF',
+            qev2: '#FF6B6B',
+            cr_qev2: '#FFD93D',
+            roas_qev2: '#4ECB71',
+            cac_payback: '#FF9F43'
+        };
+
+        // Chart.js default options
+        Chart.defaults.color = '#8b949e';
+        Chart.defaults.borderColor = '#30363d';
+
+        // Initialize overview charts
+        function initOverviewCharts() {
+            const spendCtx = document.getElementById('chartOverviewSpend').getContext('2d');
+            new Chart(spendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Spend ($)',
+                        data: [40230, 42100, 45230, 44950],
+                        borderColor: '#6C5CE7',
+                        backgroundColor: 'rgba(108, 92, 231, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#6C5CE7',
+                        pointBorderColor: '#161b22',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const fassCtx = document.getElementById('chartOverviewFass').getContext('2d');
+            new Chart(fassCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'FASS ($)',
+                        data: [5.95, 5.72, 5.35, 5.28],
+                        borderColor: '#00D2FF',
+                        backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#00D2FF',
+                        pointBorderColor: '#161b22',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create a single weekly chart
+        function createWeeklyChart(canvasId, dataKey, color, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            charts90[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: WEEKLY_DATA.labels,
+                    datasets: [{
+                        label: label,
+                        data: WEEKLY_DATA[dataKey],
+                        borderColor: color,
+                        backgroundColor: color + '1a',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#161b22',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize all 6 weekly charts for 90d view
+        function initWeeklyCharts90() {
+            if (chartsInitialized) return;
+
+            createWeeklyChart('chart90Fass', 'fass', chartColors.fass, 'FASS');
+            createWeeklyChart('chart90Fac', 'fac', chartColors.fac, 'FAC');
+            createWeeklyChart('chart90Qev2', 'qev2', chartColors.qev2, 'QEv2');
+            createWeeklyChart('chart90CrQev2', 'cr_qev2', chartColors.cr_qev2, 'CR QEv2');
+            createWeeklyChart('chart90RoasQev2', 'roas_qev2', chartColors.roas_qev2, 'ROAS QEv2');
+            createWeeklyChart('chart90CacPayback', 'cac_payback', chartColors.cac_payback, 'CAC Payback');
+
+            chartsInitialized = true;
+        }
+
+        // Tab switching logic
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Remove active class from all buttons and contents
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+
+                // Initialize weekly charts when 90d tab is clicked
+                if (tabName === 'ventana90') {
+                    // Use a small delay to ensure DOM is ready
+                    setTimeout(() => {
+                        initWeeklyCharts90();
+                    }, 100);
+                }
+            });
+        });
+
+        // Initialize overview charts on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initOverviewCharts();
+        });
+    </script>
+</body>
+</html>

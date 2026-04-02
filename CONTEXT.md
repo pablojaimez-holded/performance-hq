@@ -74,7 +74,7 @@ src/
 | Notificaciones push | 🔴 Alta | Browser Notifications API para alertas vencidas y tareas del día |
 | Deploy (Vercel/Netlify) | 🟡 Media | Para compartir con el equipo desde URL |
 | Briefing automático Cowork | 🟡 Media | Tarea programada que genera briefing con datos de campañas |
-| Dashboard de campañas | 🟢 Futura | Integrar Google Ads, Bing, Amazon, DSP via Windsor |
+| Dashboard de campañas | ✅ Hecho | Demand Capture Dashboard (Search & PMAX) con refresh diario via Windsor |
 | Insights de campañas | 🟢 Futura | Motor de análisis y recomendaciones automáticas |
 
 ---
@@ -86,6 +86,24 @@ src/
 - **Metodología de medición**: First interaction cookie + encuesta (survey) + plataformas de publicidad → visión big picture para decisiones estratégicas
 - **Dashboard principal**: Amplitude (PM Daily Control Center) — funnel completo, 3 modelos de atribución, first accounts, suscripciones
 - **Empresa**: Holded — software de gestión empresarial, diseño azul/limpio, fuente Inter
+
+---
+
+## Demand Capture Dashboard (Google Ads)
+
+El **Demand Capture Dashboard** es un report HTML autogenerado que cubre Search & PMAX (cuenta 727-602-0979), excluyendo Brand. Se refresca automáticamente cada mañana a las 8:30 (L-V) con la tarea programada `demand-capture-dashboard-refresh`.
+
+**Abrir dashboard (online):** Una vez desplegado en Vercel, accesible en `https://<tu-dominio-vercel>/demand-capture.html`
+**Abrir dashboard (local):** [demand-capture.html](computer:///Users/pablojaimez/Downloads/performance-hq%202/public/demand-capture.html)
+
+**Contenido:**
+- Overview con KPIs y gráficos de tendencia
+- Tabla de métricas 30d y 90d (Spend, Clicks, CPC, Conversions, CPA, ROAS, CR FAC, CR FASS, CR QEv2)
+- 6 gráficos semanales 90d (sin Brand): FASS, FAC, QEv2, CR QEv2, ROAS QEv2, CAC Payback
+
+**Datos:** Windsor.ai → google_ads → conversion actions: first_account_sub_started, first_account_created, qualification_v2
+
+**Tarea programada:** `demand-capture-dashboard-refresh` — ejecuta a las 8:30 L-V, fetcha 90 días de Windsor y regenera WEEKLY_DATA en el HTML.
 
 ---
 
