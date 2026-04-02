@@ -39,6 +39,17 @@ export default function Briefing({ data, pendingChanges, onMarkReviewed }) {
             Pídeme "dame el performance dashboard" para ver los últimos 90 días con datos actualizados
           </p>
         </div>
+        <div style={{ borderTop: "1px solid #bbf7d0", paddingTop: 8, marginTop: 4 }}>
+          <a href="/demand-capture.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#2563eb", fontWeight: 500, textDecoration: "none", display: "block", marginBottom: 4 }}>
+            → Demand Capture Dashboard (Search & PMAX)
+          </a>
+          <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 0 14px" }}>
+            FASS · FAC · QEv2 · CR QEv2 · ROAS QEv2 · CAC Payback · Sin Brand · 90 días semanal
+          </p>
+          <p style={{ fontSize: 10, color: "#166534", margin: "4px 0 0", fontStyle: "italic" }}>
+            Se actualiza automáticamente cada mañana a las 8:30 (L-V) via Windsor
+          </p>
+        </div>
       </div>
 
       {/* Pending changes */}
