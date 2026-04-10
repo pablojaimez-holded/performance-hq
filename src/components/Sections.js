@@ -9,6 +9,8 @@ export function Inbox({ data, onBatch }) {
   const [input, setInput] = useState("");
   const [cat, setCat] = useState("optimize");
   const [showCat, setShowCat] = useState(false);
+  const [alertFor, setAlertFor] = useState(null); // id of item showing alert form
+  const [alertDate, setAlertDate] = useState("");
 
   const add = () => {
     if (!input.trim()) return;
@@ -35,6 +37,17 @@ export function Inbox({ data, onBatch }) {
 
   const del = (id) => onBatch((p) => ({ ...p, inbox: p.inbox.filter((x) => x.id !== id) }));
 
+  const addAlert = (item) => {
+    if (!alertDate) return;
+    onBatch((p) => ({
+      ...p,
+      reminders: [{ id: uid(), text: `Inbox: ${item.text}`, pri: "normal", at: new Date().toISOString(), date: alertDate, off: false, auto: false }, ...p.reminders],
+      inbox: p.inbox.map((x) => x.id === item.id ? { ...x, alertDate } : x),
+    }));
+    setAlertFor(null);
+    setAlertDate("");
+  };
+
   const pending = (data.inbox || []).filter((i) => !i.up);
 
   return (
@@ -59,22 +72,33 @@ export function Inbox({ data, onBatch }) {
       {pending.map((it) => {
         const ic = getCat(it.cat || "optimize");
         return (
-          <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ color: ic.color, fontSize: 8 }}>{ic.icon}</span>
-                <span style={{ fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{it.text}</span>
+          <div key={it.id} style={{ padding: "7px 0", borderBottom: "1px solid #f8fafc" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: ic.color, fontSize: 8 }}>{ic.icon}</span>
+                  <span style={{ fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{it.text}</span>
+                </div>
+                <div style={{ display: "flex", gap: 4, marginTop: 1, alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: ic.color, fontWeight: 500 }}>{ic.label}</span>
+                  <span style={{ fontSize: 10, color: "#cbd5e1" }}>{formatDateFull(it.at)}</span>
+                  {it.alertDate && <span style={{ fontSize: 10, color: "#f59e0b" }}>⏰ {formatDate(it.alertDate)}</span>}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 4, marginTop: 1 }}>
-                <span style={{ fontSize: 10, color: ic.color, fontWeight: 500 }}>{ic.label}</span>
-                <span style={{ fontSize: 10, color: "#cbd5e1" }}>{formatDateFull(it.at)}</span>
+              <div style={{ display: "flex", gap: 3, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {WEEK_DAYS.map((d) => (<button key={d} onClick={() => promote(it.id, d)} style={s.chip}>{d.slice(0, 3)}</button>))}
+                <button onClick={() => promote(it.id, "Lunes", 1)} style={{ ...s.chip, background: "#f0fdf4", color: "#059669", borderColor: "#bbf7d0", fontWeight: 600 }}>Próx</button>
+                <button onClick={() => { setAlertFor(alertFor === it.id ? null : it.id); setAlertDate(""); }} title="Añadir alerta" style={{ ...s.chip, background: alertFor === it.id ? "#fef3c7" : "#fff", borderColor: alertFor === it.id ? "#fde68a" : undefined }}>⏰</button>
+                <button onClick={() => del(it.id)} style={s.chipDanger}>✕</button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 3, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {WEEK_DAYS.map((d) => (<button key={d} onClick={() => promote(it.id, d)} style={s.chip}>{d.slice(0, 3)}</button>))}
-              <button onClick={() => promote(it.id, "Lunes", 1)} style={{ ...s.chip, background: "#f0fdf4", color: "#059669", borderColor: "#bbf7d0", fontWeight: 600 }}>Próx</button>
-              <button onClick={() => del(it.id)} style={s.chipDanger}>✕</button>
-            </div>
+            {alertFor === it.id && (
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, paddingLeft: 12 }}>
+                <input type="date" value={alertDate} onChange={(e) => setAlertDate(e.target.value)} style={{ ...s.input, fontSize: 11, padding: "4px 8px", flex: 1, maxWidth: 160 }} />
+                <button onClick={() => addAlert(it)} style={{ ...s.confirm, fontSize: 10, padding: "4px 10px" }}>Crear alerta</button>
+                <button onClick={() => setAlertFor(null)} style={{ ...s.chip, fontSize: 10 }}>✕</button>
+              </div>
+            )}
           </div>
         );
       })}
@@ -97,6 +121,8 @@ export function Changelog({ data, onBatch }) {
     days: 7, detail: "", changeDate: new Date().toISOString().split("T")[0],
     noReminder: false, commentColor: "none"
   });
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
 
   const pending = data.changelog.filter((c) => c.revDate && !c.rev && isOverdue(c.revDate));
 
@@ -137,6 +163,20 @@ export function Changelog({ data, onBatch }) {
   };
 
   const markRev = (id) => onBatch((p) => ({ ...p, changelog: p.changelog.map((c) => (c.id === id ? { ...c, rev: true } : c)) }));
+
+  const startEdit = (ch) => {
+    setEditingId(ch.id);
+    setEditData({ text: ch.text, campaign: ch.campaign || "", detail: ch.detail || "", plat: ch.plat, type: ch.type, commentColor: ch.commentColor || "none" });
+  };
+
+  const saveEdit = (id) => {
+    onBatch((p) => ({
+      ...p,
+      changelog: p.changelog.map((c) => c.id === id ? { ...c, text: editData.text, campaign: editData.campaign, detail: editData.detail, plat: editData.plat, type: editData.type, commentColor: editData.commentColor } : c),
+    }));
+    setEditingId(null);
+    setEditData({});
+  };
 
   const getCommentStyle = (colorId) => {
     const cc = COMMENT_COLORS.find((c) => c.id === colorId) || COMMENT_COLORS[0];
@@ -224,20 +264,45 @@ export function Changelog({ data, onBatch }) {
 
       {data.changelog.filter((c) => c.rev || !(c.revDate && isOverdue(c.revDate))).map((ch) => {
         const colorStyle = getCommentStyle(ch.commentColor);
+        const isEditing = editingId === ch.id;
         return (
-          <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc", opacity: ch.rev ? 0.5 : 1, ...colorStyle, marginBottom: colorStyle.background ? 4 : 0 }}>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{ch.text}</span>
-              {ch.campaign && <span style={{ fontSize: 10, color: "#2563eb", display: "block", marginTop: 1 }}>{ch.campaign}</span>}
-              {ch.detail && <span style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 1 }}>{ch.detail}</span>}
-              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                <span style={{ fontSize: 10, color: "#94a3b8" }}>{ch.plat} · {ch.type}</span>
-                <span style={{ fontSize: 10, color: "#cbd5e1" }}>{ch.changeDate ? formatDate(ch.changeDate) : formatDateFull(ch.at)}</span>
-                {ch.rev && <span style={{ fontSize: 10, color: "#059669" }}>✓</span>}
-                {!ch.rev && ch.revDate && <span style={{ fontSize: 10, color: "#f59e0b" }}>revisar {formatDate(ch.revDate)}</span>}
-                {!ch.rev && !ch.revDate && <span style={{ fontSize: 10, color: "#cbd5e1" }}>sin recordatorio</span>}
+          <div key={ch.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 0", borderBottom: "1px solid #f8fafc", opacity: ch.rev ? 0.5 : 1, ...colorStyle, marginBottom: colorStyle.background ? 4 : 0 }}>
+            {isEditing ? (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                <input type="text" value={editData.text} onChange={(e) => setEditData({ ...editData, text: e.target.value })} style={s.input} placeholder="¿Qué has cambiado?" />
+                <input type="text" value={editData.campaign} onChange={(e) => setEditData({ ...editData, campaign: e.target.value })} style={{ ...s.input, fontSize: 12 }} placeholder="Nombre de campaña" />
+                <input type="text" value={editData.detail} onChange={(e) => setEditData({ ...editData, detail: e.target.value })} style={{ ...s.input, fontSize: 12 }} placeholder="Detalles" />
+                <div style={s.row}>
+                  <select value={editData.plat} onChange={(e) => setEditData({ ...editData, plat: e.target.value })} style={{ ...s.select, flex: 1 }}>{PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select>
+                  <select value={editData.type} onChange={(e) => setEditData({ ...editData, type: e.target.value })} style={{ ...s.select, flex: 1 }}>{CHANGE_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {COMMENT_COLORS.map((cc) => (
+                    <button key={cc.id} onClick={() => setEditData({ ...editData, commentColor: cc.id })} style={{ padding: "3px 8px", borderRadius: 5, fontSize: 10, fontWeight: 600, background: editData.commentColor === cc.id ? (cc.id === "none" ? "#1e293b" : cc.bg) : "transparent", color: editData.commentColor === cc.id ? (cc.id === "none" ? "#fff" : "#1e293b") : "#64748b", border: `1px solid ${cc.border}`, cursor: "pointer", fontFamily: "inherit" }}>{cc.label}</button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => saveEdit(ch.id)} style={{ ...s.confirm, fontSize: 11, padding: "5px 12px" }}>Guardar</button>
+                  <button onClick={() => { setEditingId(null); setEditData({}); }} style={{ ...s.chip, fontSize: 11 }}>Cancelar</button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{ch.text}</span>
+                  {ch.campaign && <span style={{ fontSize: 10, color: "#2563eb", display: "block", marginTop: 1 }}>{ch.campaign}</span>}
+                  {ch.detail && <span style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 1 }}>{ch.detail}</span>}
+                  <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                    <span style={{ fontSize: 10, color: "#94a3b8" }}>{ch.plat} · {ch.type}</span>
+                    <span style={{ fontSize: 10, color: "#cbd5e1" }}>{ch.changeDate ? formatDate(ch.changeDate) : formatDateFull(ch.at)}</span>
+                    {ch.rev && <span style={{ fontSize: 10, color: "#059669" }}>✓</span>}
+                    {!ch.rev && ch.revDate && <span style={{ fontSize: 10, color: "#f59e0b" }}>revisar {formatDate(ch.revDate)}</span>}
+                    {!ch.rev && !ch.revDate && <span style={{ fontSize: 10, color: "#cbd5e1" }}>sin recordatorio</span>}
+                  </div>
+                </div>
+                <button onClick={() => startEdit(ch)} title="Editar" style={{ ...s.chip, fontSize: 11, padding: "3px 7px", flexShrink: 0 }}>✏️</button>
+              </>
+            )}
           </div>
         );
       })}

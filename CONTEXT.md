@@ -11,6 +11,7 @@
 
 La app vive en: `~/Downloads/performance-hq 2/`
 Para arrancarla: `cd ~/Downloads/performance-hq\ 2 && npm run dev`
+**URL de producción (Vercel):** `https://performance-hq-app.vercel.app`
 
 ---
 
@@ -71,8 +72,12 @@ src/
 
 | Feature | Prioridad | Notas |
 |---------|-----------|-------|
-| Notificaciones push | 🔴 Alta | Browser Notifications API para alertas vencidas y tareas del día |
-| Deploy (Vercel/Netlify) | 🟡 Media | Para compartir con el equipo desde URL |
+| Drag & drop tareas en vista calendario | 🔴 Alta | Mover tareas entre franjas horarias del día arrastrándolas en la vista de calendario |
+| Editar cambios del changelog | 🔴 Alta | Permitir editar entradas del changelog una vez creadas |
+| Alertas en Inbox y tareas diarias | 🔴 Alta | Poder asignar alertas/recordatorios a tareas del Inbox y del planner semanal |
+| Categorías: crear campaña y review | 🔴 Alta | Añadir "Crear campaña" y "Review" como tipologías de tareas en CATEGORIES |
+| Notificaciones push | 🟡 Media | Browser Notifications API para alertas vencidas y tareas del día |
+| Deploy (Vercel) | ✅ Hecho | `https://performance-hq-app.vercel.app` — auto-deploy desde GitHub main |
 | Briefing automático Cowork | 🟡 Media | Tarea programada que genera briefing con datos de campañas |
 | Dashboard de campañas | ✅ Hecho | Demand Capture Dashboard (Search & PMAX) con refresh diario via Windsor |
 | Insights de campañas | 🟢 Futura | Motor de análisis y recomendaciones automáticas |
@@ -93,7 +98,7 @@ src/
 
 El **Demand Capture Dashboard** es un report HTML autogenerado que cubre Search & PMAX (cuenta 727-602-0979), excluyendo Brand. Se refresca automáticamente cada mañana a las 8:30 (L-V) con la tarea programada `demand-capture-dashboard-refresh`.
 
-**Abrir dashboard (online):** Una vez desplegado en Vercel, accesible en `https://<tu-dominio-vercel>/demand-capture.html`
+**Abrir dashboard (online):** `https://performance-hq-app.vercel.app/demand-capture.html`
 **Abrir dashboard (local):** [demand-capture.html](computer:///Users/pablojaimez/Downloads/performance-hq%202/public/demand-capture.html)
 
 **Contenido:**
@@ -123,7 +128,7 @@ El **Full Funnel Dashboard** es un report HTML que cubre todas las campañas de 
 - `624-900-3211` (Holded - Remarketing): REM
 - `865-500-6023` (Holded - Partners): ACQ (solo Demand Gen, excluye Search)
 
-**Abrir dashboard (online):** `https://<tu-dominio-vercel>/full-funnel.html`
+**Abrir dashboard (online):** `https://performance-hq-app.vercel.app/full-funnel.html`
 **Abrir dashboard (local):** [full-funnel.html](computer:///Users/pablojaimez/Downloads/performance-hq%202/public/full-funnel.html)
 
 **Contenido:**

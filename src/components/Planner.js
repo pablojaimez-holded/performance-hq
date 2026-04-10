@@ -20,6 +20,9 @@ export default function Planner({ data, day, setDay, timer, onToggleTimer, onBat
   const [overdueTasks, setOverdueTasks] = useState([]);
   const [collapsedProjects, setCollapsedProjects] = useState({});
   const [viewMode, setViewMode] = useState("tasks"); // "tasks" | "calendar"
+  const [alertFor, setAlertFor] = useState(null);
+  const [alertDate, setAlertDate] = useState("");
+  const [dragTaskId, setDragTaskId] = useState(null);
 
   const weekStart = getWeekStart(weekOffset);
   const weekId = getWeekIdFromDate(weekStart);
@@ -181,6 +184,32 @@ export default function Planner({ data, day, setDay, timer, onToggleTimer, onBat
     });
   };
 
+  const addTaskAlert = (task) => {
+    if (!alertDate) return;
+    onBatch((p) => ({
+      ...p,
+      reminders: [{ id: uid(), text: `Tarea: ${task.text}`, pri: "normal", at: new Date().toISOString(), date: alertDate, off: false, auto: false }, ...p.reminders],
+    }));
+    setAlertFor(null);
+    setAlertDate("");
+  };
+
+  const assignSlot = (taskId, slotMin) => {
+    const key = getTaskKey(day);
+    onBatch((prev) => ({
+      ...prev,
+      tasks: { ...prev.tasks, [key]: (prev.tasks[key] || []).map((t) => t.id === taskId ? { ...t, startTime: slotMin } : t) },
+    }));
+  };
+
+  const handleDrop = (e, slotMin) => {
+    e.preventDefault();
+    if (dragTaskId) {
+      assignSlot(dragTaskId, slotMin);
+      setDragTaskId(null);
+    }
+  };
+
   const toggleCollapse = (projId) => {
     setCollapsedProjects((prev) => ({ ...prev, [projId]: !prev[projId] }));
   };
@@ -300,41 +329,90 @@ export default function Planner({ data, day, setDay, timer, onToggleTimer, onBat
         <button onClick={() => setViewMode("calendar")} style={{ padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit", background: viewMode === "calendar" ? "#1e293b" : "#f1f5f9", color: viewMode === "calendar" ? "#fff" : "#64748b" }}>🕐 Calendario</button>
       </div>
 
-      {/* ── CALENDAR VIEW ───────────────────────────────── */}
+      {/* ── CALENDAR VIEW with Drag & Drop ─────────────── */}
       {viewMode === "calendar" && (
         <div style={s.card}>
-          <SectionHeader title={`${day} — Horario`} right={<span style={{ fontSize: 11, color: "#94a3b8" }}>9:00–18:30</span>} />
+          <SectionHeader title={`${day} — Horario`} right={
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <button onClick={() => {
+                const key = getTaskKey(day);
+                onBatch((prev) => ({
+                  ...prev,
+                  tasks: { ...prev.tasks, [key]: (prev.tasks[key] || []).map((t) => ({ ...t, startTime: undefined })) },
+                }));
+              }} style={{ ...s.chip, fontSize: 9 }} title="Quitar asignaciones horarias">Reset</button>
+              <span style={{ fontSize: 11, color: "#94a3b8" }}>9:00–18:30 · arrastra tareas</span>
+            </div>
+          } />
+
+          {/* Unassigned tasks (no startTime) — draggable source */}
+          {dayTasks.filter((t) => t.startTime === undefined || t.startTime === null).length > 0 && (
+            <div style={{ marginBottom: 10, padding: 8, background: "#f8fafc", borderRadius: 6 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#64748b", margin: "0 0 4px", textTransform: "uppercase" }}>Sin asignar — arrastra al horario</p>
+              {dayTasks.filter((t) => t.startTime === undefined || t.startTime === null).map((t) => {
+                const c = getCat(t.cat);
+                return (
+                  <div
+                    key={t.id}
+                    draggable
+                    onDragStart={() => setDragTaskId(t.id)}
+                    onDragEnd={() => setDragTaskId(null)}
+                    style={{ background: c.color + "12", borderLeft: `3px solid ${c.color}`, borderRadius: 4, padding: "4px 8px", marginBottom: 3, fontSize: 11, color: "#1e293b", fontWeight: 500, cursor: "grab", userSelect: "none" }}
+                  >
+                    {c.icon} {t.text} <span style={{ color: "#94a3b8", fontSize: 10 }}>({formatTime(t.dur)})</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div style={{ position: "relative" }}>
             {calendarSlots.map((slot) => {
               const slotMin = slot.hour * 60 + slot.minute;
-              // Find tasks that overlap this slot (simple: map tasks to estimated time blocks)
-              const tasksInSlot = dayTasks.filter((t, idx) => {
-                let start = 9 * 60; // Start at 9:00
-                for (let j = 0; j < idx; j++) start += (dayTasks[j].dur || 30);
-                const end = start + (t.dur || 30);
-                return slotMin >= start && slotMin < end;
+              // Tasks assigned to this slot via startTime
+              const assignedTasks = dayTasks.filter((t) => {
+                if (t.startTime === undefined || t.startTime === null) return false;
+                const end = t.startTime + (t.dur || 30);
+                return slotMin >= t.startTime && slotMin < end;
               });
+              // Show task label only on its first slot
+              const startsHere = assignedTasks.filter((t) => t.startTime === slotMin);
               const isHour = slot.minute === 0;
               const isSlackEmailDefault = (slot.hour === 9 && slot.minute === 0) || (slot.hour === 14 && slot.minute === 0);
+              const isDragOver = dragTaskId !== null;
 
               return (
-                <div key={slot.label} style={{
-                  display: "flex", alignItems: "flex-start", gap: 10,
-                  padding: "6px 0",
-                  borderTop: isHour ? "1px solid #e2e8f0" : "1px solid #f8fafc",
-                  minHeight: 32,
-                }}>
+                <div
+                  key={slot.label}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, slotMin)}
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                    padding: "6px 0",
+                    borderTop: isHour ? "1px solid #e2e8f0" : "1px solid #f8fafc",
+                    minHeight: 32,
+                    background: isDragOver ? "#f0f9ff" : "transparent",
+                    transition: "background 0.15s",
+                  }}
+                >
                   <span style={{ fontSize: 10, color: isHour ? "#475569" : "#cbd5e1", fontWeight: isHour ? 600 : 400, width: 40, flexShrink: 0, paddingTop: 2, fontFamily: "'DM Mono', monospace" }}>{slot.label}</span>
                   <div style={{ flex: 1 }}>
-                    {tasksInSlot.map((t) => {
+                    {startsHere.map((t) => {
                       const c = getCat(t.cat);
+                      const slots = Math.ceil((t.dur || 30) / 30);
                       return (
-                        <div key={t.id} style={{ background: c.color + "12", borderLeft: `3px solid ${c.color}`, borderRadius: 4, padding: "3px 8px", marginBottom: 2, fontSize: 11, color: "#1e293b", fontWeight: 500 }}>
+                        <div
+                          key={t.id}
+                          draggable
+                          onDragStart={() => setDragTaskId(t.id)}
+                          onDragEnd={() => setDragTaskId(null)}
+                          style={{ background: c.color + "18", borderLeft: `3px solid ${c.color}`, borderRadius: 4, padding: "4px 8px", marginBottom: 2, fontSize: 11, color: "#1e293b", fontWeight: 500, cursor: "grab", userSelect: "none", minHeight: slots > 1 ? (slots * 32 - 8) : undefined }}
+                        >
                           {c.icon} {t.text} <span style={{ color: "#94a3b8", fontSize: 10 }}>({formatTime(t.dur)})</span>
                         </div>
                       );
                     })}
-                    {tasksInSlot.length === 0 && isSlackEmailDefault && (
+                    {assignedTasks.length === 0 && startsHere.length === 0 && isSlackEmailDefault && !dayTasks.some((t) => t.startTime === slotMin) && (
                       <span style={{ fontSize: 10, color: "#cbd5e1", fontStyle: "italic" }}>💬 Slack + 📧 Email</span>
                     )}
                   </div>
@@ -428,12 +506,23 @@ export default function Planner({ data, day, setDay, timer, onToggleTimer, onBat
                         {task.desc ? "📄" : "📄+"}
                       </button>
 
+                      <button onClick={() => { setAlertFor(alertFor === task.id ? null : task.id); setAlertDate(""); }} title="Añadir alerta" style={{ fontSize: 10, color: alertFor === task.id ? "#f59e0b" : "#cbd5e1", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>⏰</button>
+
                       {!pr && (
                         <button onClick={() => onToggleTimer(day, task.id)} style={{ marginLeft: "auto", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: isTimer ? "#dc2626" : "#f1f5f9", color: isTimer ? "#fff" : "#475569", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                           {isTimer ? "⏹" : "▶"}
                         </button>
                       )}
                     </div>
+
+                    {/* Alert form for task */}
+                    {alertFor === task.id && (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+                        <input type="date" value={alertDate} onChange={(e) => setAlertDate(e.target.value)} style={{ ...s.input, fontSize: 11, padding: "3px 8px", maxWidth: 150 }} />
+                        <button onClick={() => addTaskAlert(task)} style={{ ...s.confirm, fontSize: 10, padding: "3px 10px" }}>Crear alerta</button>
+                        <button onClick={() => setAlertFor(null)} style={{ ...s.chip, fontSize: 10, padding: "2px 6px" }}>✕</button>
+                      </div>
+                    )}
 
                     {/* Category change picker */}
                     {isEditingCat && (

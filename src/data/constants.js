@@ -9,6 +9,8 @@ export const CATEGORIES = [
   { id: "tech", label: "Tech/Setup", color: "#0891b2", icon: "⬡" },
   { id: "slack", label: "Petición Slack", color: "#611f69", icon: "💬" },
   { id: "email", label: "Petición Email", color: "#ea4335", icon: "📧" },
+  { id: "create_campaign", label: "Crear campaña", color: "#059669", icon: "🚀" },
+  { id: "review", label: "Review", color: "#e11d48", icon: "🔍" },
   { id: "other", label: "Otro", color: "#6b7280", icon: "○" },
 ];
 
