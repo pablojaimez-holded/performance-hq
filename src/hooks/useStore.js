@@ -18,10 +18,25 @@ export function useStore(initialData) {
   const [syncStatus, setSyncStatus] = useState("idle");
   const timerRef = useRef(null);
 
-  // Load: try Supabase first (if admin + available), fall back to localStorage, then initialData
+  // Load: localStorage is PRIMARY source, Supabase is fallback for new devices
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      // 1. Try localStorage first (always fastest + most up-to-date)
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          if (!cancelled) {
+            setData(JSON.parse(saved));
+            setLoaded(true);
+          }
+          return;
+        }
+      } catch {
+        // localStorage failed, continue to Supabase
+      }
+
+      // 2. No local data → try Supabase (for new devices / cleared cache)
       if (isAdmin && supabase) {
         try {
           const { data: row, error } = await supabase
@@ -36,24 +51,15 @@ export function useStore(initialData) {
             setLoaded(true);
             return;
           }
-          if (error) console.warn("Supabase load error, using local:", error.message);
+          if (error) console.warn("Supabase load error:", error.message);
         } catch (e) {
-          console.warn("Supabase unreachable, using local:", e.message);
+          console.warn("Supabase unreachable:", e.message);
         }
       }
 
-      // Always fall back to localStorage (works for everyone)
+      // 3. Nothing found → use initial data
       if (!cancelled) {
-        try {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            setData(JSON.parse(saved));
-          } else {
-            setData(initialData);
-          }
-        } catch {
-          setData(initialData);
-        }
+        setData(initialData);
         setLoaded(true);
       }
     }

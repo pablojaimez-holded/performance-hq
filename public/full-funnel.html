@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Holded Full Funnel Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <style>
@@ -242,6 +243,31 @@
     </style>
 </head>
 <body>
+    <!-- Login overlay -->
+    <div id="login-overlay" style="position:fixed;inset:0;z-index:9999;background:#0d1117;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;max-width:380px;width:90%;text-align:center;">
+            <div style="font-size:32px;margin-bottom:12px;">🔒</div>
+            <h2 style="color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:20px;margin-bottom:6px;">Full Funnel Dashboard</h2>
+            <p style="color:#8b949e;font-size:13px;margin-bottom:24px;">Introduce la contraseña para acceder</p>
+            <input id="login-pw" type="password" placeholder="Password" autocomplete="off"
+                style="width:100%;padding:10px 14px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;font-size:14px;outline:none;margin-bottom:12px;"
+                onkeydown="if(event.key==='Enter')document.getElementById('login-btn').click()">
+            <button id="login-btn" onclick="(function(){
+                if(document.getElementById('login-pw').value==='Holdeddashboard2026'){
+                    document.getElementById('login-overlay').style.display='none';
+                    sessionStorage.setItem('ff-auth','1');
+                } else {
+                    document.getElementById('login-err').style.display='block';
+                    document.getElementById('login-pw').style.borderColor='#f85149';
+                }
+            })()" style="width:100%;padding:10px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+                Acceder
+            </button>
+            <p id="login-err" style="display:none;color:#f85149;font-size:12px;margin-top:10px;">Contraseña incorrecta</p>
+        </div>
+    </div>
+    <script>if(sessionStorage.getItem('ff-auth')==='1')document.getElementById('login-overlay').style.display='none';</script>
+
     <div class="container">
         <div class="header">
             <h1>Holded Full Funnel Dashboard</h1>
