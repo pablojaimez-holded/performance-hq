@@ -5,12 +5,19 @@ import { STORAGE_KEY } from "../data/constants";
 const DB_ROW_ID = "main";
 const SAVE_DEBOUNCE_MS = 1500;
 const AUTH_KEY = "performance-hq-admin";
+const TIMESTAMP_KEY = "performance-hq-updated-at";
 
-// Auth check: if user is logged in (via Login component), enable Supabase sync
 function checkAdmin() {
   return localStorage.getItem(AUTH_KEY) === "true";
 }
 
+/**
+ * Smart sync strategy:
+ * - Both localStorage and Supabase store a timestamp (updated_at)
+ * - On load: read BOTH sources, compare timestamps, keep the NEWEST
+ * - On save: write to BOTH with current timestamp
+ * - This guarantees data survives deploys, cache clears, and device switches
+ */
 export function useStore(initialData) {
   const [isAdmin, setIsAdmin] = useState(checkAdmin);
   const [data, setData] = useState(null);
@@ -18,38 +25,41 @@ export function useStore(initialData) {
   const [syncStatus, setSyncStatus] = useState("idle");
   const timerRef = useRef(null);
 
-  // Load: localStorage is PRIMARY source, Supabase is fallback for new devices
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
-      // 1. Try localStorage first (always fastest + most up-to-date)
+      let localData = null;
+      let localTimestamp = 0;
+      let cloudData = null;
+      let cloudTimestamp = 0;
+
+      // 1. Read localStorage
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
+        const ts = localStorage.getItem(TIMESTAMP_KEY);
         if (saved) {
-          if (!cancelled) {
-            setData(JSON.parse(saved));
-            setLoaded(true);
-          }
-          return;
+          localData = JSON.parse(saved);
+          localTimestamp = ts ? parseInt(ts, 10) : 0;
         }
       } catch {
-        // localStorage failed, continue to Supabase
+        // localStorage failed
       }
 
-      // 2. No local data → try Supabase (for new devices / cleared cache)
+      // 2. Read Supabase (if available)
       if (isAdmin && supabase) {
         try {
           const { data: row, error } = await supabase
             .from("app_state")
-            .select("data")
+            .select("data, updated_at")
             .eq("id", DB_ROW_ID)
             .maybeSingle();
 
-          if (!cancelled && row?.data) {
-            setData(row.data);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(row.data));
-            setLoaded(true);
-            return;
+          if (row?.data) {
+            cloudData = row.data;
+            cloudTimestamp = row.updated_at
+              ? new Date(row.updated_at).getTime()
+              : 0;
           }
           if (error) console.warn("Supabase load error:", error.message);
         } catch (e) {
@@ -57,25 +67,77 @@ export function useStore(initialData) {
         }
       }
 
-      // 3. Nothing found → use initial data
-      if (!cancelled) {
+      if (cancelled) return;
+
+      // 3. Compare timestamps — keep the NEWEST data
+      if (localData && cloudData) {
+        if (cloudTimestamp > localTimestamp) {
+          // Cloud is newer → use cloud, update localStorage
+          console.log("[sync] Cloud data is newer, using Supabase data");
+          setData(cloudData);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+          localStorage.setItem(TIMESTAMP_KEY, String(cloudTimestamp));
+        } else {
+          // Local is newer (or same) → keep local, push to cloud
+          console.log("[sync] Local data is newer or equal, keeping localStorage");
+          setData(localData);
+          // Sync local → cloud if local is strictly newer
+          if (localTimestamp > cloudTimestamp && isAdmin && supabase) {
+            syncToCloud(localData);
+          }
+        }
+      } else if (localData) {
+        // Only local exists
+        console.log("[sync] Only localStorage found");
+        setData(localData);
+      } else if (cloudData) {
+        // Only cloud exists (new device / cleared cache)
+        console.log("[sync] Only Supabase found (new device?)");
+        setData(cloudData);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+        localStorage.setItem(TIMESTAMP_KEY, String(cloudTimestamp));
+      } else {
+        // Nothing found → fresh start
+        console.log("[sync] No data found, using initial data");
         setData(initialData);
-        setLoaded(true);
       }
+
+      setLoaded(true);
     }
+
     load();
     return () => { cancelled = true; };
   // eslint-disable-next-line
   }, []);
 
-  // Save to Supabase (only if admin/cloud sync enabled)
+  // Push data to Supabase
+  async function syncToCloud(newData) {
+    if (!isAdmin || !supabase) return;
+    try {
+      await supabase
+        .from("app_state")
+        .upsert({
+          id: DB_ROW_ID,
+          data: newData,
+          updated_at: new Date().toISOString(),
+        });
+    } catch (e) {
+      console.warn("Background sync failed:", e.message);
+    }
+  }
+
+  // Save to Supabase with status indicator
   const saveToSupabase = useCallback(async (newData) => {
     if (!isAdmin || !supabase) return;
     setSyncStatus("saving");
     try {
       const { error } = await supabase
         .from("app_state")
-        .upsert({ id: DB_ROW_ID, data: newData, updated_at: new Date().toISOString() });
+        .upsert({
+          id: DB_ROW_ID,
+          data: newData,
+          updated_at: new Date().toISOString(),
+        });
 
       if (error) {
         console.error("Supabase save error:", error.message);
@@ -90,18 +152,21 @@ export function useStore(initialData) {
     }
   }, [isAdmin]);
 
-  // Always save to localStorage — Supabase sync is optional (admin only)
+  // On every data change → save to localStorage + Supabase with timestamp
   useEffect(() => {
     if (!loaded || !data) return;
 
-    // Save to localStorage instantly (always, for everyone)
+    const now = Date.now();
+
+    // Save to localStorage instantly (always)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(TIMESTAMP_KEY, String(now));
     } catch (e) {
       console.error("localStorage save failed:", e);
     }
 
-    // Debounced cloud sync to Supabase (only if admin)
+    // Debounced cloud sync (admin only)
     if (isAdmin) {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => saveToSupabase(data), SAVE_DEBOUNCE_MS);
@@ -110,7 +175,6 @@ export function useStore(initialData) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [data, loaded, isAdmin, saveToSupabase]);
 
-  // Updater: always works (no admin gate)
   const update = (key, valueOrFn) => {
     setData((prev) => ({
       ...prev,
@@ -118,7 +182,6 @@ export function useStore(initialData) {
     }));
   };
 
-  // Batch update: always works (no admin gate)
   const batch = (fn) => {
     setData((prev) => fn(prev));
   };
