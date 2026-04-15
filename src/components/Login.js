@@ -21,7 +21,7 @@ export function logout() {
   window.location.reload();
 }
 
-export default function Login({ onSuccess }) {
+export default function Login({ onSuccess, onImport }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,7 +123,27 @@ export default function Login({ onSuccess }) {
           {loading ? "Verificando..." : "Entrar"}
         </button>
 
-        <p style={{ fontSize: 11, color: theme.colors.textFaint, margin: "20px 0 0" }}>
+        {onImport && (
+          <button
+            type="button"
+            onClick={onImport}
+            style={{
+              marginTop: 16,
+              background: "none",
+              border: "none",
+              fontSize: 12,
+              color: theme.colors.primary,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontWeight: 500,
+              padding: "4px 8px",
+            }}
+          >
+            📦 Importar datos
+          </button>
+        )}
+
+        <p style={{ fontSize: 11, color: theme.colors.textFaint, margin: "12px 0 0" }}>
           Solo para uso interno · Holded Performance
         </p>
       </form>

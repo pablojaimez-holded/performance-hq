@@ -10,6 +10,7 @@ import Planner from "./components/Planner";
 import Notes from "./components/Notes";
 import { Inbox, Changelog, Completed, Alerts, Projects } from "./components/Sections";
 import Login, { checkAuth, logout } from "./components/Login";
+import DataImport from "./components/DataImport";
 
 // ── Responsive hook ────────────────────────────────────────────
 function useMediaQuery(query) {
@@ -39,9 +40,13 @@ const NAV_ITEMS = [
 
 export default function App() {
   const [authed, setAuthed] = useState(checkAuth);
+  const [showImport, setShowImport] = useState(false);
+
+  // Show data import screen
+  if (showImport) return <DataImport onDone={() => setShowImport(false)} />;
 
   // Show login screen if not authenticated
-  if (!authed) return <Login onSuccess={() => setAuthed(true)} />;
+  if (!authed) return <Login onSuccess={() => setAuthed(true)} onImport={() => setShowImport(true)} />;
 
   return <AppMain />;
 }
