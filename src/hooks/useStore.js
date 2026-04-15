@@ -4,23 +4,11 @@ import { STORAGE_KEY } from "../data/constants";
 
 const DB_ROW_ID = "main";
 const SAVE_DEBOUNCE_MS = 1500;
-const ADMIN_KEY = "performance-hq-admin";
+const AUTH_KEY = "performance-hq-admin";
 
-// Admin mode: unlocked via ?admin=PASSWORD in URL or saved in localStorage
-// Admin only controls Supabase cloud sync — local reads/writes always work
+// Auth check: if user is logged in (via Login component), enable Supabase sync
 function checkAdmin() {
-  const params = new URLSearchParams(window.location.search);
-  const urlKey = params.get("admin");
-  const savedKey = localStorage.getItem(ADMIN_KEY);
-  const secret = process.env.REACT_APP_ADMIN_SECRET || "holded2026";
-
-  if (urlKey === secret) {
-    localStorage.setItem(ADMIN_KEY, "true");
-    // Clean URL so password is not visible
-    window.history.replaceState({}, "", window.location.pathname);
-    return true;
-  }
-  return savedKey === "true";
+  return localStorage.getItem(AUTH_KEY) === "true";
 }
 
 export function useStore(initialData) {

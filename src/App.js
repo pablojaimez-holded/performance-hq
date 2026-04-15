@@ -9,6 +9,7 @@ import Briefing from "./components/Briefing";
 import Planner from "./components/Planner";
 import Notes from "./components/Notes";
 import { Inbox, Changelog, Completed, Alerts, Projects } from "./components/Sections";
+import Login, { checkAuth, logout } from "./components/Login";
 
 // ── Responsive hook ────────────────────────────────────────────
 function useMediaQuery(query) {
@@ -37,6 +38,15 @@ const NAV_ITEMS = [
 ];
 
 export default function App() {
+  const [authed, setAuthed] = useState(checkAuth);
+
+  // Show login screen if not authenticated
+  if (!authed) return <Login onSuccess={() => setAuthed(true)} />;
+
+  return <AppMain />;
+}
+
+function AppMain() {
   const { data, loaded, batch } = useStore(createInitialData());
   const timer = useTimer();
   const [section, setSection] = useState("brief");
@@ -211,9 +221,18 @@ export default function App() {
       <div style={{
         padding: "12px 16px",
         borderTop: `1px solid ${theme.colors.border}`,
-        fontSize: 10, color: theme.colors.textFaint,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        Performance HQ v0.2
+        <span style={{ fontSize: 10, color: theme.colors.textFaint }}>Performance HQ v0.3</span>
+        <button
+          onClick={logout}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 10, color: theme.colors.textMuted, fontFamily: "inherit",
+            padding: "2px 6px", borderRadius: theme.radius.sm,
+          }}
+          title="Cerrar sesión"
+        >Salir</button>
       </div>
     </div>
   );
